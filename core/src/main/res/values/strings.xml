@@ -1,0 +1,5 @@
+<resources>
+    <string name="reminder_channel_name">Daily check-in</string>
+    <string name="reminder_notification_title">A moment for yourself</string>
+    <string name="reminder_notification_text">Notice how you are arriving today.</string>
+</resources>
