@@ -14,7 +14,7 @@ internal fun energyTrendSummary(records: List<MoodRecord>): String {
     val first = sorted.first()
     val last = sorted.last()
     val moodDelta = last.moodValue - first.moodValue
-    val energyDelta = last.energyLevel - first.energyLevel
+    val energyDelta = (last.energyLevel ?: 2) - (first.energyLevel ?: 2)
 
     if (sorted.size >= 3) {
         var directionChanges = 0

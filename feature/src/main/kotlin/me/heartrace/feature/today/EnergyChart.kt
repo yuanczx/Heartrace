@@ -6,11 +6,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import me.heartrace.data.MoodRecord
+import me.heartrace.feature.charts.smoothCubicPath
 import me.heartrace.ui.theme.HeartraceTheme
 
 @Composable
@@ -40,13 +40,15 @@ internal fun EnergyChart(
         }
         if (orderedRecords.isNotEmpty()) {
             val chartLength = (chartEnd - chartStart).toFloat()
+            val energyRecords = orderedRecords.filter { it.energyLevel != null }
 
-            val energyCoords = orderedRecords.map { record ->
+            val energyCoords = energyRecords.map { record ->
                 val timeRatio = if (chartLength <= 0f) 0.5f else ((record.recordedAt - chartStart).toFloat() / chartLength).coerceIn(0f, 1f)
                 val energyRatio = when (record.energyLevel) {
                     1 -> 0.18f
                     2 -> 0.50f
-                    else -> 0.85f
+                    3 -> 0.85f
+                    else -> 0f
                 }
                 Offset(xPadding + usableWidth * timeRatio, yPadding + usableHeight * (1f - energyRatio))
             }
@@ -57,7 +59,7 @@ internal fun EnergyChart(
                 Offset(xPadding + usableWidth * timeRatio, yPadding + usableHeight * (1f - moodRatio))
             }
 
-            if (orderedRecords.size == 1) {
+            if (energyCoords.size == 1) {
                 val ep = energyCoords.first()
                 val mp = moodCoords.first()
                 drawLine(mintColor.copy(alpha = 0.25f), Offset(xPadding, ep.y), Offset(size.width - xPadding, ep.y), 1.5f)
@@ -65,17 +67,13 @@ internal fun EnergyChart(
             }
 
             if (energyCoords.size > 1) {
-                val area = Path().apply {
-                    moveTo(energyCoords.first().x, yPadding + usableHeight)
-                    energyCoords.forEach { lineTo(it.x, it.y) }
+                val area = smoothCubicPath(energyCoords).apply {
                     lineTo(energyCoords.last().x, yPadding + usableHeight)
+                    lineTo(energyCoords.first().x, yPadding + usableHeight)
                     close()
                 }
                 drawPath(area, color = mintColor.copy(alpha = .08f))
-                val linePath = Path().apply {
-                    moveTo(energyCoords.first().x, energyCoords.first().y)
-                    energyCoords.drop(1).forEach { lineTo(it.x, it.y) }
-                }
+                val linePath = smoothCubicPath(energyCoords)
                 drawPath(
                     linePath,
                     color = mintColor,
@@ -93,17 +91,13 @@ internal fun EnergyChart(
             }
 
             if (moodCoords.size > 1) {
-                val area = Path().apply {
-                    moveTo(moodCoords.first().x, yPadding + usableHeight)
-                    moodCoords.forEach { lineTo(it.x, it.y) }
+                val area = smoothCubicPath(moodCoords).apply {
                     lineTo(moodCoords.last().x, yPadding + usableHeight)
+                    lineTo(moodCoords.first().x, yPadding + usableHeight)
                     close()
                 }
                 drawPath(area, color = coralColor.copy(alpha = .10f))
-                val linePath = Path().apply {
-                    moveTo(moodCoords.first().x, moodCoords.first().y)
-                    moodCoords.drop(1).forEach { lineTo(it.x, it.y) }
-                }
+                val linePath = smoothCubicPath(moodCoords)
                 drawPath(
                     linePath,
                     color = coralColor,

@@ -9,7 +9,6 @@ import me.heartrace.data.TodayDataSnapshot
 import me.heartrace.feature.testing.FakeHeartraceDataSource
 import me.heartrace.feature.testing.MainDispatcherRule
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 
@@ -39,14 +38,31 @@ class TodayViewModelTest {
         }
         val viewModel = TodayViewModel(repository)
         advanceUntilIdle()
-        viewModel.setMoodValue(80f)
+        viewModel.selectMood(Mood.BRIGHT)
+        viewModel.saveCheckIn(momentText = "  a note  ")
+        advanceUntilIdle()
+
+        assertEquals(listOf(FakeHeartraceDataSource.CheckInCall(72, null, "  a note  ")), repository.savedCheckIns)
+        assertEquals(1, viewModel.uiState.savedCount)
+        assertEquals(false, viewModel.uiState.isSaving)
+    }
+
+    @Test
+    fun existing_today_energy_does_not_prefill_next_check_in() = runTest {
+        val repository = FakeHeartraceDataSource().apply {
+            today.value = TodayDataSnapshot(
+                moodValue = 72,
+                energyLevel = 3,
+                todayMoodRecords = listOf(MoodRecord(8, Mood.BRIGHT, 72, 3, 1L)),
+            )
+        }
+        val viewModel = TodayViewModel(repository)
+        advanceUntilIdle()
+
         viewModel.saveCheckIn()
         advanceUntilIdle()
 
-        assertEquals(listOf(FakeHeartraceDataSource.CheckInCall(80, 2)), repository.savedCheckIns)
-        assertEquals(1L, viewModel.uiState.pendingMomentForId)
-        assertEquals(1, viewModel.uiState.momentPromptDirection)
-        assertEquals(false, viewModel.uiState.isSaving)
+        assertEquals(null, repository.savedCheckIns.single().energyLevel)
     }
 
     @Test
@@ -55,16 +71,7 @@ class TodayViewModelTest {
         val viewModel = TodayViewModel(repository)
         viewModel.saveCheckIn()
         advanceUntilIdle()
-
-        viewModel.saveMoment("  a useful note  ", listOf("file://image"), "file://audio", 1200L)
-        advanceUntilIdle()
-
-        assertEquals("  a useful note  ", repository.savedMoments.single().text)
-        assertNull(viewModel.uiState.pendingMomentForId)
-        viewModel.saveCheckIn()
-        advanceUntilIdle()
-        viewModel.dismissMoment()
-        assertNull(viewModel.uiState.pendingMomentForId)
+        assertEquals(1, viewModel.uiState.savedCount)
     }
 
     @Test
@@ -75,6 +82,22 @@ class TodayViewModelTest {
         advanceUntilIdle()
 
         assertEquals(false, viewModel.uiState.isSaving)
+        assertEquals("save_failed", viewModel.uiState.errorMessage)
+    }
+
+    @Test
+    fun snapshot_refresh_preserves_selected_mood_and_failed_draft() = runTest {
+        val repository = FakeHeartraceDataSource().apply { saveCheckInError = IllegalStateException() }
+        val viewModel = TodayViewModel(repository)
+        advanceUntilIdle()
+        viewModel.selectMood(Mood.RESTLESS)
+        viewModel.setMomentDraft("keep me")
+        viewModel.saveCheckIn()
+        advanceUntilIdle()
+        repository.today.value = TodayDataSnapshot(todayNotes = listOf(me.heartrace.data.DailyNote(1, "", "other", Mood.STEADY)))
+        advanceUntilIdle()
+        assertEquals(Mood.RESTLESS, viewModel.uiState.selectedMood)
+        assertEquals("keep me", viewModel.uiState.momentDraft)
         assertEquals("save_failed", viewModel.uiState.errorMessage)
     }
 }

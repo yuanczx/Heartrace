@@ -23,7 +23,7 @@ class FakeHeartraceDataSource : HeartraceDataSource {
     var saveMomentError: Throwable? = null
     var saveNoteError: Throwable? = null
 
-    data class CheckInCall(val moodValue: Int, val energyLevel: Int)
+    data class CheckInCall(val moodValue: Int, val energyLevel: Int?, val momentText: String? = null)
 
     data class MomentCall(
         val id: Long,
@@ -45,7 +45,7 @@ class FakeHeartraceDataSource : HeartraceDataSource {
     data class UpdateCall(
         val id: Long,
         val moodValue: Int,
-        val energyLevel: Int,
+        val energyLevel: Int?,
         val momentText: String?,
         val recordedAt: Long,
     )
@@ -72,9 +72,17 @@ class FakeHeartraceDataSource : HeartraceDataSource {
         savedNotes += NoteCall(text, mood, recordedAt, imageUris, audioUri, audioDurationMs)
     }
 
-    override suspend fun saveCheckIn(moodValue: Int, energyLevel: Int, recordedAt: Long): Long {
+    override suspend fun saveCheckIn(
+        moodValue: Int,
+        energyLevel: Int?,
+        recordedAt: Long,
+        momentText: String?,
+        imageUris: List<String>,
+        audioUri: String?,
+        audioDurationMs: Long,
+    ): Long {
         saveCheckInError?.let { throw it }
-        savedCheckIns += CheckInCall(moodValue, energyLevel)
+        savedCheckIns += CheckInCall(moodValue, energyLevel, momentText)
         return nextId++
     }
 
@@ -93,7 +101,7 @@ class FakeHeartraceDataSource : HeartraceDataSource {
     override suspend fun updateCheckIn(
         id: Long,
         moodValue: Int,
-        energyLevel: Int,
+        energyLevel: Int?,
         momentText: String?,
         recordedAt: Long,
         imageUris: List<String>,
@@ -117,6 +125,11 @@ class FakeHeartraceDataSource : HeartraceDataSource {
 
     override suspend fun setRemindersEnabled(enabled: Boolean) {
         preferences.value = preferences.value.copy(remindersEnabled = enabled)
+    }
+
+    override suspend fun setWeeklyGoalDays(days: Int) {
+        preferences.value = preferences.value.copy(weeklyGoalDays = days)
+        insights.value = insights.value.copy(weeklyGoalDays = days)
     }
 
     override suspend fun setProfile(nickname: String, avatarUri: String?) {

@@ -236,6 +236,20 @@ private fun PreferencesPane(
                 selectedOption = settings.language,
                 onOptionSelected = settingsViewModel::setLanguage,
             )
+            Spacer(Modifier.height(18.dp))
+            Text(stringResource(FeatureR.string.weekly_goal_settings), color = Cream, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(3.dp))
+            Text(stringResource(FeatureR.string.weekly_goal_settings_hint), color = Muted, fontSize = 12.sp)
+            Spacer(Modifier.height(13.dp))
+            SlidingSegmentedControl(
+                options = listOf(
+                    SegmentedOption(3, stringResource(FeatureR.string.weekly_goal_days, 3)),
+                    SegmentedOption(5, stringResource(FeatureR.string.weekly_goal_days, 5)),
+                    SegmentedOption(7, stringResource(FeatureR.string.weekly_goal_days, 7)),
+                ),
+                selectedOption = settings.weeklyGoalDays,
+                onOptionSelected = settingsViewModel::setWeeklyGoalDays,
+            )
         }
     }
     Spacer(Modifier.height(22.dp))

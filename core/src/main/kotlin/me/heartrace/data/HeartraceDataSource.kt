@@ -25,8 +25,12 @@ interface HeartraceDataSource {
 
     suspend fun saveCheckIn(
         moodValue: Int,
-        energyLevel: Int,
+        energyLevel: Int?,
         recordedAt: Long = System.currentTimeMillis(),
+        momentText: String? = null,
+        imageUris: List<String> = emptyList(),
+        audioUri: String? = null,
+        audioDurationMs: Long = 0L,
     ): Long
 
     suspend fun saveMoment(
@@ -41,7 +45,7 @@ interface HeartraceDataSource {
     suspend fun updateCheckIn(
         id: Long,
         moodValue: Int,
-        energyLevel: Int,
+        energyLevel: Int?,
         momentText: String?,
         recordedAt: Long = System.currentTimeMillis(),
         imageUris: List<String> = emptyList(),
@@ -56,6 +60,8 @@ interface HeartraceDataSource {
     suspend fun setLightTheme(light: Boolean)
 
     suspend fun setRemindersEnabled(enabled: Boolean)
+
+    suspend fun setWeeklyGoalDays(days: Int)
 
     suspend fun setProfile(nickname: String, avatarUri: String?)
 

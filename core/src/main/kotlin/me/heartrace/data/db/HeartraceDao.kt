@@ -66,6 +66,9 @@ interface AppStateDao {
     @Query("UPDATE app_state SET mood = :mood WHERE id = 1")
     suspend fun updateMood(mood: String)
 
+    @Query("UPDATE app_state SET weeklyGoalDays = :days WHERE id = 1")
+    suspend fun updateWeeklyGoalDays(days: Int)
+
     @Query("UPDATE app_state SET mood = 'STEADY', savedNote = '' WHERE id = 1")
     suspend fun resetToday()
 }

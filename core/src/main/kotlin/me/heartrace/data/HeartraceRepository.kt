@@ -54,6 +54,7 @@ constructor(
             remindersEnabled = saved.remindersEnabled,
             nickname = saved.nickname,
             avatarUri = saved.avatarUri,
+            weeklyGoalDays = saved.weeklyGoalDays.coerceIn(3, 7),
         )
     }
 
@@ -80,7 +81,6 @@ constructor(
     }
 
     override fun observeInsights(): Flow<InsightsDataSnapshot> {
-        val recentStart = startOfRecentWindow()
         val historyFlow = combine(
             noteDao.observeAll(),
             moodEntryDao.observeAll(),
@@ -89,25 +89,24 @@ constructor(
             val notesByEntryId = noteModels.mapNotNull { note ->
                 note.moodEntryId?.let { it to note }
             }.toMap()
+            val records = moodEntries.map { entry ->
+                val record = entry.toModel()
+                val note = notesByEntryId[record.id]
+                record.copy(
+                    momentText = note?.text,
+                    imageUris = note?.imageUris ?: emptyList(),
+                    audioUri = note?.audioUri,
+                    audioDurationMs = note?.audioDurationMs ?: 0L,
+                )
+            }
             InsightsDataSnapshot(
-                records = moodEntries.map { entry ->
-                    val record = entry.toModel()
-                    val note = notesByEntryId[record.id]
-                    record.copy(
-                        momentText = note?.text,
-                        imageUris = note?.imageUris ?: emptyList(),
-                        audioUri = note?.audioUri,
-                        audioDurationMs = note?.audioDurationMs ?: 0L,
-                    )
-                },
+                records = records,
                 notes = noteModels,
+                recentRecords = records.filter { it.recordedAt >= startOfRecentWindow() },
             )
         }
-        val recentRecordsFlow = moodEntryDao
-            .observeBetween(recentStart, Long.MAX_VALUE)
-            .map { entries -> entries.map { it.toModel() } }
-        return combine(historyFlow, recentRecordsFlow) { history, recentRecords ->
-            history.copy(recentRecords = recentRecords)
+        return combine(historyFlow, stateDao.observe()) { history, state ->
+            history.copy(weeklyGoalDays = state?.weeklyGoalDays?.coerceIn(3, 7) ?: 5)
         }
     }
 
@@ -128,32 +127,44 @@ constructor(
         ensureSeedData()
         database.withTransaction {
             val safeRecordedAt = recordedAt.coerceAtMost(System.currentTimeMillis())
-            val checkInId = saveCheckInInternal(mood.toMoodValue(), mood.energyLevel(), safeRecordedAt)
-            if (text.isNotBlank() || imageUris.isNotEmpty() || !audioUri.isNullOrBlank()) {
-                noteDao.insert(
-                    DailyNoteEntity(
-                        dateLabel = "",
-                        text = text.trim(),
-                        mood = mood.name,
-                        createdAt = safeRecordedAt,
-                        moodEntryId = checkInId,
-                        imageUris = imageUris.toDbString(),
-                        audioUri = audioUri,
-                        audioDurationMs = audioDurationMs,
-                    ),
-                )
-            }
+            saveCheckInInternal(
+                mood.toMoodValue(),
+                mood.energyLevel(),
+                safeRecordedAt,
+                text,
+                imageUris,
+                audioUri,
+                audioDurationMs,
+            )
         }
     }
 
-    override suspend fun saveCheckIn(moodValue: Int, energyLevel: Int, recordedAt: Long): Long = run {
+    override suspend fun saveCheckIn(
+        moodValue: Int,
+        energyLevel: Int?,
+        recordedAt: Long,
+        momentText: String?,
+        imageUris: List<String>,
+        audioUri: String?,
+        audioDurationMs: Long,
+    ): Long = run {
         ensureSeedData()
-        database.withTransaction { saveCheckInInternal(moodValue, energyLevel, recordedAt) }
+        database.withTransaction {
+            saveCheckInInternal(moodValue, energyLevel, recordedAt, momentText, imageUris, audioUri, audioDurationMs)
+        }
     }
 
-    private suspend fun saveCheckInInternal(moodValue: Int, energyLevel: Int, recordedAt: Long): Long {
+    private suspend fun saveCheckInInternal(
+        moodValue: Int,
+        energyLevel: Int?,
+        recordedAt: Long,
+        momentText: String? = null,
+        imageUris: List<String> = emptyList(),
+        audioUri: String? = null,
+        audioDurationMs: Long = 0L,
+    ): Long {
         val boundedMood = moodValue.coerceIn(0, 100)
-        val boundedEnergy = energyLevel.coerceIn(1, 3)
+        val boundedEnergy = energyLevel?.coerceIn(1, 3)
         val mood = boundedMood.toMood().name
         val safeRecordedAt = recordedAt.coerceAtMost(System.currentTimeMillis())
         stateDao.clearSavedNote()
@@ -165,6 +176,21 @@ constructor(
                 recordedAt = safeRecordedAt,
             ),
         )
+        val trimmedText = momentText?.trim().orEmpty()
+        if (trimmedText.isNotBlank() || imageUris.isNotEmpty() || !audioUri.isNullOrBlank()) {
+            noteDao.insert(
+                DailyNoteEntity(
+                    dateLabel = "",
+                    text = trimmedText,
+                    mood = mood,
+                    createdAt = safeRecordedAt,
+                    moodEntryId = id,
+                    imageUris = imageUris.toDbString(),
+                    audioUri = audioUri,
+                    audioDurationMs = audioDurationMs,
+                ),
+            )
+        }
         syncCurrentMood()
         return id
     }
@@ -217,7 +243,7 @@ constructor(
     override suspend fun updateCheckIn(
         id: Long,
         moodValue: Int,
-        energyLevel: Int,
+        energyLevel: Int?,
         momentText: String?,
         recordedAt: Long,
         imageUris: List<String>,
@@ -228,7 +254,7 @@ constructor(
         var obsoleteAttachments = emptyList<String>()
         database.withTransaction {
             val boundedMood = moodValue.coerceIn(0, 100)
-            val boundedEnergy = energyLevel.coerceIn(1, 3)
+            val boundedEnergy = energyLevel?.coerceIn(1, 3)
             val moodName = boundedMood.toMood().name
             val existingEntry = moodEntryDao.findById(id) ?: return@withTransaction
             val safeRecordedAt = recordedAt.coerceAtMost(System.currentTimeMillis())
@@ -296,6 +322,8 @@ constructor(
     override suspend fun setLightTheme(light: Boolean) = updateState { copy(lightTheme = light) }
 
     override suspend fun setRemindersEnabled(enabled: Boolean) = updateState { copy(remindersEnabled = enabled) }
+
+    override suspend fun setWeeklyGoalDays(days: Int) = updateState { copy(weeklyGoalDays = days.coerceIn(3, 7)) }
 
     override suspend fun setProfile(nickname: String, avatarUri: String?) {
         val safeNickname = nickname.trim().ifBlank { AppStateEntity().nickname }
@@ -382,7 +410,7 @@ constructor(
                 )
             },
             moodValue = records.firstOrNull()?.moodValue ?: saved.mood.toMoodValue(),
-            energyLevel = records.firstOrNull()?.energyLevel ?: 2,
+            energyLevel = records.firstOrNull()?.energyLevel,
         )
     }
 
@@ -428,26 +456,6 @@ constructor(
     private fun String.toMood() = runCatching { Mood.valueOf(this) }.getOrDefault(Mood.STEADY)
 
     private fun String.toMoodValue() = toMood().toMoodValue()
-
-    private fun Mood.toMoodValue(): Int = when (this) {
-        Mood.DRAINED -> 10
-        Mood.LOW -> 25
-        Mood.QUIET -> 40
-        Mood.STEADY -> 55
-        Mood.BRIGHT -> 72
-        Mood.RESTLESS -> 68
-        Mood.ELECTRIC -> 90
-    }
-
-    private fun Int.toMood(): Mood = when {
-        this < 18 -> Mood.DRAINED
-        this < 33 -> Mood.LOW
-        this < 48 -> Mood.QUIET
-        this < 64 -> Mood.STEADY
-        this < 80 -> Mood.BRIGHT
-        this < 88 -> Mood.RESTLESS
-        else -> Mood.ELECTRIC
-    }
 
     private fun Mood.energyLevel(): Int = when (this) {
         Mood.DRAINED, Mood.LOW -> 1

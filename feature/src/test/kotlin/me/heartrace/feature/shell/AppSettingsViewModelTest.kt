@@ -40,11 +40,13 @@ class AppSettingsViewModelTest {
         viewModel.setLanguage(AppLanguage.ENGLISH)
         viewModel.setLightTheme(true)
         viewModel.setRemindersEnabled(true)
+        viewModel.setWeeklyGoalDays(7)
         advanceUntilIdle()
 
         assertEquals(AppLanguage.ENGLISH, repository.preferences.value.language)
         assertEquals(true, repository.preferences.value.lightTheme)
         assertEquals(true, repository.preferences.value.remindersEnabled)
+        assertEquals(7, repository.preferences.value.weeklyGoalDays)
         assertEquals(listOf(false, true), scheduler.enabledValues)
     }
 }

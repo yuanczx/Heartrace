@@ -47,10 +47,13 @@
     <string name="note_placeholder">此刻在想什么？</string>
     <string name="edit_record">编辑签到</string>
     <string name="delete_record">删除</string>
+    <string name="delete_record_confirm_title">删除这条记录？</string>
+    <string name="delete_record_confirm_message">这条记录及其补充内容都会被删除。</string>
     <string name="mood_title">心情</string>
     <string name="energy_and_mood">能量与心情</string>
     <string name="daily_trends">每日平均趋势</string>
     <string name="daily_trends_subtitle">近期的每日平均心情与能量变化</string>
+    <string name="daily_trends_accessibility">每日心情与能量趋势图</string>
 
     <string name="patterns_title">你的节奏</string>
     <string name="patterns_subtitle">从过去七天里，看见一点趋势。</string>
@@ -94,6 +97,7 @@
     <string name="energy_low">低</string>
     <string name="energy_medium">中</string>
     <string name="energy_high">高</string>
+    <string name="energy_not_recorded">未记录</string>
     <string name="save_check_in">保存此刻</string>
     <string name="save_failed">保存失败，你的选择还在，请重试。</string>
     <string name="today_timeline">今天的时间线</string>
@@ -109,6 +113,8 @@
     <string name="moment_prompt_same">此刻有什么值得记住？</string>
     <string name="skip">跳过</string>
     <string name="save_moment">保存时刻</string>
+    <string name="add_details">补充内容（可选）</string>
+    <string name="hide_details">收起补充内容</string>
     <string name="insights_title">你的洞察</string>
     <string name="insights_subtitle">持续记录，节奏会慢慢变得清晰。</string>
     <string name="insights_feedback">反馈</string>
@@ -117,6 +123,27 @@
     <string name="insights_ready">来自你记录的一个模式</string>
     <string name="average_energy">平均能量：%1$.1f / 3</string>
     <string name="average_mood">平均心情：%1$d / 100</string>
+    <string name="insights_record_count">此视图中有 %1$d 条记录</string>
+    <string name="insights_active_days">活跃 %1$d 天</string>
+    <string name="weekly_goal_title">每周目标</string>
+    <string name="weekly_goal_progress">%1$d / %2$d 天</string>
+    <string name="weekly_goal_remaining">本周还差 %1$d 天达成目标</string>
+    <string name="weekly_goal_remaining_plural">本周还差 %1$d 天达成目标</string>
+    <string name="weekly_goal_complete">本周目标已完成，继续观察自己的节奏。</string>
+    <string name="streak_title">当前连续记录：%1$d 天</string>
+    <string name="badges_title">成就</string>
+    <string name="badge_first_record">第一次记录</string>
+    <string name="badge_three_day_streak">连续记录 3 天</string>
+    <string name="badge_seven_day_streak">连续记录 7 天</string>
+    <string name="badge_fourteen_day_streak">连续记录 14 天</string>
+    <string name="badge_ten_records">累计记录 10 次</string>
+    <string name="badge_first_weekly_goal">完成第一个每周目标</string>
+    <string name="badge_four_weekly_goals">连续 4 周完成目标</string>
+    <string name="badge_locked">尚未获得 · %1$s</string>
+    <string name="weekly_goal_settings">每周记录目标</string>
+    <string name="weekly_goal_settings_hint">选择每周想留意心情的天数</string>
+    <string name="weekly_goal_days">%1$d 天</string>
+    <string name="weekly_goal_today">本周：%1$d / %2$d 天</string>
     <string name="history">历史记录</string>
     <string name="no_history">保存的签到会显示在这里。</string>
     <string name="no_history_for_date">这一天还没有签到。</string>
@@ -124,6 +151,6 @@
     <string name="history_next_period">下一周期</string>
     <string name="history_select_date">选择日期</string>
     <string name="history_range_day">日</string>
-    <string name="history_range_month">Month</string>
+    <string name="history_range_month">月</string>
     <string name="history_range_year">年</string>
 </resources>

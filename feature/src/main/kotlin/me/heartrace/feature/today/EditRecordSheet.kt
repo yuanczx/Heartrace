@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
@@ -26,8 +27,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,6 +55,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.heartrace.data.MoodRecord
+import me.heartrace.data.toMood
+import me.heartrace.data.toMoodValue
 import me.heartrace.ui.components.AttachmentSelectorBar
 import me.heartrace.ui.components.Coral
 import me.heartrace.ui.components.Cream
@@ -76,7 +77,7 @@ fun EditRecordSheet(
     onDismiss: () -> Unit,
     onSave: (
         moodValue: Int,
-        energyLevel: Int,
+        energyLevel: Int?,
         momentText: String,
         recordedAt: Long,
         imageUris: List<String>,
@@ -86,7 +87,7 @@ fun EditRecordSheet(
     onDelete: () -> Unit,
 ) {
     var moodValue by remember(record) { mutableIntStateOf(record.moodValue) }
-    var energyLevel by remember(record) { mutableIntStateOf(record.energyLevel) }
+    var energyLevel by remember(record) { mutableStateOf(record.energyLevel) }
     var momentText by remember(record) { mutableStateOf(record.momentText ?: "") }
     var recordedAt by remember(record) { mutableLongStateOf(record.recordedAt) }
     var imageUris by remember(record) { mutableStateOf(record.imageUris) }
@@ -99,6 +100,7 @@ fun EditRecordSheet(
     val localeTag = LocalConfiguration.current.locales.toLanguageTags()
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
     fun discardDraftAttachments() {
         imageUris.filterNot(originalImageUris::contains).forEach { deleteInternalAttachment(context, it) }
         if (audioUri != originalAudioUri) deleteInternalAttachment(context, audioUri)
@@ -206,6 +208,25 @@ fun EditRecordSheet(
         }
     }
 
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            containerColor = PanelLight,
+            title = { Text(stringResource(R.string.delete_record_confirm_title), color = Cream, fontWeight = FontWeight.SemiBold) },
+            text = { Text(stringResource(R.string.delete_record_confirm_message), color = Muted) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirmation = false
+                    discardDraftAttachments()
+                    onDelete()
+                }) { Text(stringResource(R.string.delete_record), color = Coral, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) { Text(stringResource(R.string.cancel), color = Muted) }
+            },
+        )
+    }
+
     val locale = LocalConfiguration.current.locales[0]
     val recordedDate = Date(recordedAt)
     val dateLabel = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, locale).format(recordedDate)
@@ -237,10 +258,7 @@ fun EditRecordSheet(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
-                        TextButton(onClick = {
-                            discardDraftAttachments()
-                            onDelete()
-                        }) {
+                        TextButton(onClick = { showDeleteConfirmation = true }) {
                             Icon(
                                 Icons.Outlined.Delete,
                                 contentDescription = null,
@@ -294,35 +312,14 @@ fun EditRecordSheet(
                     SectionLabel(stringResource(R.string.mood_scale))
                     Spacer(Modifier.height(6.dp))
                     Surface(
-                        color = PanelLight,
-                        shape = RoundedCornerShape(12.dp),
+                        color = Panel,
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    moodLabel(moodValue),
-                                    color = Cream,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Text("$moodValue/100", color = Muted, fontSize = 12.sp)
-                            }
-                            Slider(
-                                value = moodValue.toFloat(),
-                                onValueChange = { moodValue = it.toInt() },
-                                valueRange = 0f..100f,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = Coral,
-                                    activeTrackColor = Coral,
-                                    inactiveTrackColor = Panel,
-                                ),
-                            )
-                        }
+                        MoodStrip(
+                            selected = moodValue.toMood(),
+                            onSelect = { moodValue = it.toMoodValue() },
+                        )
                     }
                     Spacer(Modifier.height(14.dp))
                     SectionLabel(stringResource(R.string.energy_level))
@@ -333,7 +330,7 @@ fun EditRecordSheet(
                             EnergyChoiceOption(2, stringResource(R.string.energy_medium)),
                             EnergyChoiceOption(3, stringResource(R.string.energy_high)),
                         ),
-                        selectedLevel = energyLevel,
+                        selectedLevel = energyLevel ?: 0,
                         onSelect = { energyLevel = it },
                     )
                     Spacer(Modifier.height(14.dp))

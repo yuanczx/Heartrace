@@ -142,4 +142,22 @@ class HeartraceRepositoryTest {
         assertEquals("", preferences.nickname)
         assertEquals("file://avatar", preferences.avatarUri)
     }
+
+    @Test
+    fun saveCheckIn_persists_optional_moment_and_weekly_goal() = runBlocking {
+        repository.setWeeklyGoalDays(7)
+        repository.saveCheckIn(
+            moodValue = 72,
+            energyLevel = null,
+            momentText = "  optional note  ",
+            imageUris = listOf("file://image"),
+        )
+
+        val preferences = repository.observePreferences().first()
+        val record = repository.loadTodaySnapshot().todayMoodRecords.single()
+        assertEquals(7, preferences.weeklyGoalDays)
+        assertEquals("optional note", record.momentText)
+        assertEquals(listOf("file://image"), record.imageUris)
+        assertNull(record.energyLevel)
+    }
 }

@@ -68,17 +68,25 @@ constructor(
         val selectedDay = selectedDateStart!!.coerceAtMost(todayStart)
         selectedDateStart = selectedDay
 
-        val windowStart = Calendar.getInstance().apply {
-            timeInMillis = todayStart
-            add(Calendar.DAY_OF_YEAR, -6)
-        }.timeInMillis
+        val windowStart = shiftDays(todayStart, -6)
         val recentRecords = snapshot.recentRecords.filter { it.recordedAt >= windowStart && it.recordedAt <= now }
-        val days = recentRecords.map { dayStart(it.recordedAt) }.toSet().size
-        val summaries = recentRecords
+        val periodRecords = when (historyRange) {
+            HistoryRange.DAY -> recentRecords
+
+            HistoryRange.MONTH -> snapshot.records.filter {
+                it.recordedAt >= periodStart(selectedDay) && it.recordedAt < shiftPeriod(selectedDay, 1)
+            }
+
+            HistoryRange.YEAR -> snapshot.records.filter {
+                it.recordedAt >= periodStart(selectedDay) && it.recordedAt < shiftPeriod(selectedDay, 1)
+            }
+        }
+        val days = periodRecords.map { dayStart(it.recordedAt) }.toSet().size
+        val summaries = periodRecords
             .groupBy { dayStart(it.recordedAt) }
             .map { (dayTimestamp, dayRecords) ->
                 val avgMood = dayRecords.map { it.moodValue }.average().toInt()
-                val avgEnergy = dayRecords.map { it.energyLevel }.average().toFloat()
+                val avgEnergy = dayRecords.mapNotNull { it.energyLevel }.takeIf { it.isNotEmpty() }?.average()?.toFloat()
                 val calendar = Calendar.getInstance().apply { timeInMillis = dayTimestamp }
                 val month = calendar.get(Calendar.MONTH) + 1
                 val day = calendar.get(Calendar.DAY_OF_MONTH)
@@ -99,10 +107,14 @@ constructor(
             notes = snapshot.notes,
             dailySummaries = summaries,
             activeDays = days,
-            averageEnergy = recentRecords.takeIf { it.isNotEmpty() }?.map { it.energyLevel }
+            averageEnergy = periodRecords.takeIf { it.any { record -> record.energyLevel != null } }?.mapNotNull { it.energyLevel }
                 ?.average()?.toFloat(),
-            averageMood = recentRecords.takeIf { it.isNotEmpty() }?.map { it.moodValue }
+            averageMood = periodRecords.takeIf { it.isNotEmpty() }?.map { it.moodValue }
                 ?.average()?.toInt(),
+            recordCount = periodRecords.size,
+            weeklyGoal = calculateWeeklyGoalProgress(snapshot.records, now, snapshot.weeklyGoalDays),
+            currentStreak = calculateCurrentStreak(snapshot.records, now),
+            badges = calculateBadges(snapshot.records, now, snapshot.weeklyGoalDays),
             selectedDateStart = selectedDay,
             historyRange = historyRange,
             canGoToNextDate = periodStart(selectedDay) < periodStart(todayStart),
@@ -133,14 +145,6 @@ constructor(
         }
     }.timeInMillis
 
-    private fun dayStart(timestamp: Long): Long = Calendar.getInstance().apply {
-        timeInMillis = timestamp
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
-
     fun startEditRecord(record: MoodRecord) {
         uiState = uiState.copy(editingRecord = record)
     }
@@ -152,7 +156,7 @@ constructor(
     fun updateRecord(
         id: Long,
         moodValue: Int,
-        energyLevel: Int,
+        energyLevel: Int?,
         momentText: String?,
         recordedAt: Long,
         imageUris: List<String> = emptyList(),

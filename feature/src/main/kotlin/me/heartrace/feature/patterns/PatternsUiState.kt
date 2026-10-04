@@ -7,7 +7,7 @@ data class DailyRecordSummary(
     val dayStart: Long,
     val dateLabel: String,
     val averageMood: Int,
-    val averageEnergy: Float,
+    val averageEnergy: Float?,
 )
 
 enum class HistoryRange {
@@ -24,6 +24,10 @@ data class PatternsUiState(
     val activeDays: Int = 0,
     val averageEnergy: Float? = null,
     val averageMood: Int? = null,
+    val recordCount: Int = 0,
+    val weeklyGoal: WeeklyGoalProgress = WeeklyGoalProgress(5, 0, 5, false),
+    val currentStreak: Int = 0,
+    val badges: List<BadgeStatus> = emptyList(),
     val selectedDateStart: Long = 0L,
     val historyRange: HistoryRange = HistoryRange.DAY,
     val canGoToNextDate: Boolean = false,

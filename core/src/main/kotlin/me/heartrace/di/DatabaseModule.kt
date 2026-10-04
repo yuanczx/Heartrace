@@ -50,6 +50,17 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE app_state ADD COLUMN weeklyGoalDays INTEGER NOT NULL DEFAULT 5")
+            db.execSQL("CREATE TABLE mood_entries_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, mood TEXT NOT NULL, moodValue INTEGER NOT NULL, energyLevel INTEGER, recordedAt INTEGER NOT NULL)")
+            db.execSQL("INSERT INTO mood_entries_new (id, mood, moodValue, energyLevel, recordedAt) SELECT id, mood, moodValue, energyLevel, recordedAt FROM mood_entries")
+            db.execSQL("DROP TABLE mood_entries")
+            db.execSQL("ALTER TABLE mood_entries_new RENAME TO mood_entries")
+            db.execSQL("CREATE INDEX index_mood_entries_recordedAt ON mood_entries(recordedAt)")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(
@@ -59,6 +70,7 @@ object DatabaseModule {
         .addMigrations(MIGRATION_1_2)
         .addMigrations(MIGRATION_2_3)
         .addMigrations(MIGRATION_3_4)
+        .addMigrations(MIGRATION_4_5)
         .build()
 
     @Provides fun provideNoteDao(database: HeartraceDatabase): DailyNoteDao = database.dailyNoteDao()

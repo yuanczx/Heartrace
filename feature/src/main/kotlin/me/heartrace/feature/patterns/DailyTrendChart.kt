@@ -6,11 +6,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import me.heartrace.feature.charts.smoothCubicPath
 import me.heartrace.ui.theme.HeartraceTheme
+import me.heartrace.uikit.R
 
 @Composable
 internal fun DailyTrendChart(summaries: List<DailyRecordSummary>) {
@@ -19,7 +23,13 @@ internal fun DailyTrendChart(summaries: List<DailyRecordSummary>) {
     val mintColor = colors.mint
     val inkColor = colors.ink
     val panelLightColor = colors.panelLight
-    Canvas(Modifier.fillMaxWidth().height(110.dp)) {
+    val chartDescription = stringResource(R.string.daily_trends_accessibility)
+    Canvas(
+        Modifier
+            .fillMaxWidth()
+            .height(110.dp)
+            .semantics { contentDescription = chartDescription },
+    ) {
         val xPadding = 16.dp.toPx()
         val yPadding = 12.dp.toPx()
         val usableWidth = (size.width - 2 * xPadding).coerceAtLeast(1f)
@@ -30,44 +40,37 @@ internal fun DailyTrendChart(summaries: List<DailyRecordSummary>) {
         }
         if (summaries.isNotEmpty()) {
             val count = summaries.size
-            val energyCoords = summaries.mapIndexed { index, summary ->
+            val energyCoords = summaries.mapIndexedNotNull { index, summary ->
+                val energy = summary.averageEnergy ?: return@mapIndexedNotNull null
                 val x = if (count == 1) xPadding + usableWidth / 2f else xPadding + usableWidth * (index.toFloat() / (count - 1))
-                Offset(x, yPadding + usableHeight * (1f - (summary.averageEnergy / 3f).coerceIn(0f, 1f)))
+                Offset(x, yPadding + usableHeight * (1f - (energy / 3f).coerceIn(0f, 1f)))
             }
             val moodCoords = summaries.mapIndexed { index, summary ->
                 val x = if (count == 1) xPadding + usableWidth / 2f else xPadding + usableWidth * (index.toFloat() / (count - 1))
                 Offset(x, yPadding + usableHeight * (1f - (summary.averageMood / 100f).coerceIn(0f, 1f)))
             }
-            if (count == 1) {
+            if (count == 1 && energyCoords.isNotEmpty()) {
                 val ep = energyCoords.first()
                 val mp = moodCoords.first()
                 drawLine(mintColor.copy(alpha = 0.25f), Offset(xPadding, ep.y), Offset(size.width - xPadding, ep.y), 1.5f)
                 drawLine(coralColor.copy(alpha = 0.25f), Offset(xPadding, mp.y), Offset(size.width - xPadding, mp.y), 1.5f)
             }
-            if (count > 1) {
-                val energyArea = Path().apply {
-                    moveTo(energyCoords.first().x, yPadding + usableHeight)
-                    energyCoords.forEach { lineTo(it.x, it.y) }
+            if (count > 1 && energyCoords.size > 1) {
+                val energyArea = smoothCubicPath(energyCoords).apply {
                     lineTo(energyCoords.last().x, yPadding + usableHeight)
+                    lineTo(energyCoords.first().x, yPadding + usableHeight)
                     close()
                 }
                 drawPath(energyArea, color = mintColor.copy(alpha = .08f))
-                val energyLine = Path().apply {
-                    moveTo(energyCoords.first().x, energyCoords.first().y)
-                    energyCoords.drop(1).forEach { lineTo(it.x, it.y) }
-                }
+                val energyLine = smoothCubicPath(energyCoords)
                 drawPath(energyLine, color = mintColor, style = Stroke(width = 2.5f, cap = StrokeCap.Round))
-                val moodArea = Path().apply {
-                    moveTo(moodCoords.first().x, yPadding + usableHeight)
-                    moodCoords.forEach { lineTo(it.x, it.y) }
+                val moodArea = smoothCubicPath(moodCoords).apply {
                     lineTo(moodCoords.last().x, yPadding + usableHeight)
+                    lineTo(moodCoords.first().x, yPadding + usableHeight)
                     close()
                 }
                 drawPath(moodArea, color = coralColor.copy(alpha = .10f))
-                val moodLine = Path().apply {
-                    moveTo(moodCoords.first().x, moodCoords.first().y)
-                    moodCoords.drop(1).forEach { lineTo(it.x, it.y) }
-                }
+                val moodLine = smoothCubicPath(moodCoords)
                 drawPath(moodLine, color = coralColor, style = Stroke(width = 3f, cap = StrokeCap.Round))
             }
             energyCoords.forEachIndexed { index, point ->

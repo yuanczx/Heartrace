@@ -30,6 +30,7 @@ data class AppStateEntity(
     val remindersEnabled: Boolean = false,
     val nickname: String = "",
     val avatarUri: String? = null,
+    val weeklyGoalDays: Int = 5,
 )
 
 @Entity(
@@ -40,6 +41,6 @@ data class MoodEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val mood: String,
     val moodValue: Int = 50,
-    val energyLevel: Int = 2,
+    val energyLevel: Int? = null,
     val recordedAt: Long = System.currentTimeMillis(),
 )

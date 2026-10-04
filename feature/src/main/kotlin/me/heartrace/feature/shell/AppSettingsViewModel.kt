@@ -19,6 +19,7 @@ data class AppSettingsUiState(
     val remindersEnabled: Boolean = false,
     val nickname: String = "",
     val avatarUri: String? = null,
+    val weeklyGoalDays: Int = 5,
 )
 
 @HiltViewModel
@@ -44,6 +45,7 @@ constructor(
                         remindersEnabled = snapshot.remindersEnabled,
                         nickname = snapshot.nickname,
                         avatarUri = snapshot.avatarUri,
+                        weeklyGoalDays = snapshot.weeklyGoalDays,
                     )
                 if (lastReminderState != snapshot.remindersEnabled) {
                     lastReminderState = snapshot.remindersEnabled
@@ -70,5 +72,11 @@ constructor(
             reminderScheduler.setEnabled(enabled)
         }
         viewModelScope.launch { repository.setRemindersEnabled(enabled) }
+    }
+
+    fun setWeeklyGoalDays(days: Int) {
+        val safeDays = days.coerceIn(3, 7)
+        uiState = uiState.copy(weeklyGoalDays = safeDays)
+        viewModelScope.launch { repository.setWeeklyGoalDays(safeDays) }
     }
 }

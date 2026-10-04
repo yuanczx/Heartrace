@@ -1,11 +1,17 @@
 package me.heartrace.feature.patterns
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -77,11 +83,92 @@ private fun InsightsOverviewPane(state: PatternsUiState) {
                 Spacer(Modifier.height(10.dp))
                 Text(stringResource(R.string.average_energy, state.averageEnergy ?: 0f), color = Muted, fontSize = 13.sp)
                 Text(stringResource(R.string.average_mood, state.averageMood ?: 0), color = Muted, fontSize = 13.sp)
+                Text(stringResource(R.string.insights_record_count, state.recordCount), color = Muted, fontSize = 13.sp)
+                Text(stringResource(R.string.insights_active_days, state.activeDays), color = Muted, fontSize = 13.sp)
             }
         }
     }
+    Spacer(Modifier.height(18.dp))
+    WeeklyGoalCard(state.weeklyGoal)
+    Spacer(Modifier.height(18.dp))
+    Surface(color = Panel, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+        Text(
+            stringResource(R.string.streak_title, state.currentStreak),
+            color = Cream,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(16.dp),
+        )
+    }
     Spacer(Modifier.height(23.dp))
     DailyTrendSection(summaries = state.dailySummaries)
+    Spacer(Modifier.height(23.dp))
+    BadgesCard(state.badges)
+}
+
+@Composable
+private fun WeeklyGoalCard(progress: WeeklyGoalProgress) {
+    Surface(color = Panel, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(stringResource(R.string.weekly_goal_title), color = Cream, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(7.dp))
+            Text(stringResource(R.string.weekly_goal_progress, progress.completedDays, progress.goalDays), color = Muted, fontSize = 13.sp)
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { (progress.completedDays.toFloat() / progress.goalDays).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(7.dp))
+            Text(
+                when {
+                    progress.isComplete -> stringResource(R.string.weekly_goal_complete)
+                    progress.remainingDays == 1 -> stringResource(R.string.weekly_goal_remaining, progress.remainingDays)
+                    else -> stringResource(R.string.weekly_goal_remaining_plural, progress.remainingDays)
+                },
+                color = Muted,
+                fontSize = 12.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BadgesCard(badges: List<BadgeStatus>) {
+    Column {
+        SectionLabel(stringResource(R.string.badges_title))
+        Spacer(Modifier.height(9.dp))
+        Surface(color = Panel, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                badges.forEach { badge ->
+                    val title = when (badge.kind) {
+                        BadgeKind.FIRST_RECORD -> stringResource(R.string.badge_first_record)
+                        BadgeKind.THREE_DAY_STREAK -> stringResource(R.string.badge_three_day_streak)
+                        BadgeKind.SEVEN_DAY_STREAK -> stringResource(R.string.badge_seven_day_streak)
+                        BadgeKind.FOURTEEN_DAY_STREAK -> stringResource(R.string.badge_fourteen_day_streak)
+                        BadgeKind.TEN_RECORDS -> stringResource(R.string.badge_ten_records)
+                        BadgeKind.FIRST_WEEKLY_GOAL -> stringResource(R.string.badge_first_weekly_goal)
+                        BadgeKind.FOUR_WEEKLY_GOALS -> stringResource(R.string.badge_four_weekly_goals)
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = if (badge.earned) Icons.Outlined.CheckCircle else Icons.Outlined.Lock,
+                            contentDescription = title,
+                            tint = if (badge.earned) me.heartrace.ui.components.Coral else Muted,
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            if (badge.earned) title else stringResource(R.string.badge_locked, title),
+                            color = if (badge.earned) Cream else Muted,
+                            fontSize = 13.sp,
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

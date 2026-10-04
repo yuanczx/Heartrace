@@ -48,12 +48,13 @@ data class EnergyChoiceOption(
 @Composable
 fun EnergyChoices(
     options: List<EnergyChoiceOption>,
-    selectedLevel: Int,
+    selectedLevel: Int?,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = HeartraceTheme.colors
-    val selectedIndex = options.indexOfFirst { it.level == selectedLevel }.coerceAtLeast(0)
+    val selectedIndex = options.indexOfFirst { it.level == selectedLevel }
+    val visualIndex = selectedIndex.coerceAtLeast(0)
 
     BoxWithConstraints(
         modifier = modifier
@@ -66,7 +67,7 @@ fun EnergyChoices(
         if (options.isNotEmpty()) {
             val itemWidth = maxWidth / options.size
             val animatedOffset by animateDpAsState(
-                targetValue = itemWidth * selectedIndex,
+                targetValue = itemWidth * visualIndex,
                 animationSpec = spring(
                     stiffness = Spring.StiffnessMediumLow,
                     dampingRatio = 0.8f,
@@ -74,17 +75,19 @@ fun EnergyChoices(
                 label = "energy_choice_offset",
             )
             val selectedBackground by animateColorAsState(
-                targetValue = energyChoiceBackground(options[selectedIndex].level, colors),
+                targetValue = energyChoiceBackground(options[visualIndex].level, colors),
                 label = "energy_choice_background",
             )
-            Box(
-                Modifier
-                    .offset { IntOffset(animatedOffset.roundToPx(), 0) }
-                    .width(itemWidth)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(selectedBackground),
-            )
+            if (selectedIndex >= 0) {
+                Box(
+                    Modifier
+                        .offset { IntOffset(animatedOffset.roundToPx(), 0) }
+                        .width(itemWidth)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(selectedBackground),
+                )
+            }
             Row(Modifier.fillMaxSize()) {
                 options.forEachIndexed { index, option ->
                     val isSelected = index == selectedIndex
@@ -141,7 +144,8 @@ private fun energyChoiceBackground(level: Int, colors: me.heartrace.ui.theme.Hea
 }
 
 @Composable
-fun energyLabel(level: Int): String = when (level) {
+fun energyLabel(level: Int?): String = when (level) {
+    null -> stringResource(R.string.energy_not_recorded)
     1 -> stringResource(R.string.energy_low)
     3 -> stringResource(R.string.energy_high)
     else -> stringResource(R.string.energy_medium)

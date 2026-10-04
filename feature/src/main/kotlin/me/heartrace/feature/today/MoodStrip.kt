@@ -5,16 +5,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import me.heartrace.data.Mood
-import me.heartrace.ui.components.Muted
 import me.heartrace.uikit.R
 
 @Composable
@@ -31,15 +27,7 @@ fun MoodStrip(selected: Mood, onSelect: ((Mood) -> Unit)? = null) {
     val row1 = moods.take(4)
     val row2 = moods.drop(4)
 
-    Column {
-        Text(
-            stringResource(R.string.arriving),
-            color = Muted,
-            fontSize = 10.sp,
-            letterSpacing = 1.5.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(11.dp))
+    Column(Modifier.padding(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -68,6 +56,8 @@ fun MoodStrip(selected: Mood, onSelect: ((Mood) -> Unit)? = null) {
                         modifier = Modifier.weight(1f),
                     )
                 }
+                // Keep the second row aligned with the four-column first row.
+                Spacer(Modifier.weight(1f))
             }
         }
     }
