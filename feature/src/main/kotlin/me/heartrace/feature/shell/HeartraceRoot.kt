@@ -2,7 +2,11 @@ package me.heartrace.feature.shell
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,6 +35,12 @@ import me.heartrace.feature.today.TodayScreen
 import me.heartrace.feature.you.YouScreen
 import me.heartrace.ui.components.BottomBar
 import me.heartrace.ui.components.Ink
+import me.heartrace.ui.components.SideNavigation
+import kotlin.math.roundToInt
+
+internal const val NAVIGATION_RAIL_BREAKPOINT_DP = 600
+
+internal fun shouldUseNavigationRail(widthDp: Int): Boolean = widthDp >= NAVIGATION_RAIL_BREAKPOINT_DP
 
 @Composable
 internal fun HeartraceRoot(settingsViewModel: AppSettingsViewModel) {
@@ -76,27 +86,65 @@ internal fun HeartraceRoot(settingsViewModel: AppSettingsViewModel) {
             }
         }
     }
-    Scaffold(
-        containerColor = Ink,
-        bottomBar = {
-            BottomBar(
-                selected = currentDestination.toAppTab(),
-                indicatorPosition =
-                @SuppressLint("FrequentlyChangingValue")
-                (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, tabs.lastIndex.toFloat()),
-                onTabSelected = ::navigateToTab,
-            )
-        },
-    ) { padding ->
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize().background(Ink).padding(padding),
-            verticalAlignment = Alignment.Top,
-        ) { page ->
-            val entry = decoratedEntries.getOrNull(page)
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                Column(Modifier.fillMaxWidth().widthIn(max = 430.dp).align(Alignment.CenterHorizontally).padding(horizontal = 22.dp, vertical = 20.dp)) {
-                    entry?.Content()
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val useNavigationRail = shouldUseNavigationRail(maxWidth.value.toInt())
+        val contentMaxWidth = when {
+            maxWidth >= 900.dp -> 1120.dp
+            useNavigationRail -> 760.dp
+            else -> 430.dp
+        }
+        val horizontalContentPadding = if (useNavigationRail) 32.dp else 22.dp
+        val verticalContentPadding = if (useNavigationRail) 28.dp else 20.dp
+        val indicatorPosition =
+            @SuppressLint("FrequentlyChangingValue")
+            (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, tabs.lastIndex.toFloat())
+        val indicatedTab = tabs[indicatorPosition.roundToInt().coerceIn(tabs.indices)].toAppTab()
+
+        Scaffold(
+            containerColor = Ink,
+            bottomBar = {
+                if (!useNavigationRail) {
+                    BottomBar(
+                        selected = currentDestination.toAppTab(),
+                        indicatorPosition = indicatorPosition,
+                        onTabSelected = ::navigateToTab,
+                    )
+                }
+            },
+        ) { padding ->
+            Row(
+                Modifier
+                    .fillMaxSize()
+                    .background(Ink)
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            ) {
+                if (useNavigationRail) {
+                    SideNavigation(
+                        selected = indicatedTab,
+                        onTabSelected = ::navigateToTab,
+                    )
+                }
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    verticalAlignment = Alignment.Top,
+                ) { page ->
+                    val entry = decoratedEntries.getOrNull(page)
+                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .widthIn(max = contentMaxWidth)
+                                .align(Alignment.CenterHorizontally)
+                                .padding(
+                                    horizontal = horizontalContentPadding,
+                                    vertical = verticalContentPadding,
+                                ),
+                        ) {
+                            entry?.Content()
+                        }
+                    }
                 }
             }
         }

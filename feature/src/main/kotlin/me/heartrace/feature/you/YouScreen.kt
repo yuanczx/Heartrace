@@ -43,6 +43,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.heartrace.data.AppLanguage
 import me.heartrace.feature.shell.AppSettingsViewModel
+import me.heartrace.ui.components.AdaptiveTwoPane
 import me.heartrace.ui.components.Coral
 import me.heartrace.ui.components.Cream
 import me.heartrace.ui.components.Header
@@ -131,66 +132,23 @@ fun YouScreen(
             Icon(Icons.Outlined.Edit, contentDescription = stringResource(FeatureR.string.profile_edit), tint = Muted, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.height(28.dp))
-        SectionLabel(stringResource(FeatureR.string.preferences))
-        Spacer(Modifier.height(10.dp))
-        Surface(color = Panel, shape = RoundedCornerShape(13.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(15.dp)) {
-                Text(stringResource(FeatureR.string.language), color = Cream, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(3.dp))
-                Text(stringResource(FeatureR.string.language_hint), color = Muted, fontSize = 12.sp)
-                Spacer(Modifier.height(13.dp))
-                SlidingSegmentedControl(
-                    options = listOf(
-                        SegmentedOption(AppLanguage.SYSTEM, stringResource(FeatureR.string.language_system)),
-                        SegmentedOption(AppLanguage.ENGLISH, stringResource(FeatureR.string.language_english)),
-                        SegmentedOption(AppLanguage.CHINESE, stringResource(FeatureR.string.language_chinese)),
-                    ),
-                    selectedOption = settings.language,
-                    onOptionSelected = settingsViewModel::setLanguage,
+        AdaptiveTwoPane(
+            compactSpacing = 22.dp,
+            first = {
+                PreferencesPane(
+                    settings = settings,
+                    settingsViewModel = settingsViewModel,
+                    onReminderChanged = onReminderChanged,
                 )
-            }
-        }
-        Spacer(Modifier.height(22.dp))
-        SectionLabel(stringResource(FeatureR.string.reminders))
-        Spacer(Modifier.height(10.dp))
-        Surface(color = Panel, shape = RoundedCornerShape(13.dp), modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(FeatureR.string.reminder_title), color = Cream, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(3.dp))
-                    Text(stringResource(FeatureR.string.reminder_hint), color = Muted, fontSize = 12.sp)
-                }
-                Switch(checked = settings.remindersEnabled, onCheckedChange = onReminderChanged)
-            }
-        }
-        Spacer(Modifier.height(22.dp))
-        SectionLabel(stringResource(FeatureR.string.appearance))
-        Spacer(Modifier.height(10.dp))
-        Surface(color = Panel, shape = RoundedCornerShape(13.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(15.dp)) {
-                Text(stringResource(FeatureR.string.appearance), color = Cream, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(3.dp))
-                Text(stringResource(FeatureR.string.appearance_hint), color = Muted, fontSize = 12.sp)
-                Spacer(Modifier.height(13.dp))
-                SlidingSegmentedControl(
-                    options = listOf(
-                        SegmentedOption(false, stringResource(FeatureR.string.theme_dark)),
-                        SegmentedOption(true, stringResource(FeatureR.string.theme_light)),
-                    ),
-                    selectedOption = settings.lightTheme,
-                    onOptionSelected = settingsViewModel::setLightTheme,
+            },
+            second = {
+                AppearancePane(
+                    settings = settings,
+                    settingsViewModel = settingsViewModel,
+                    onReset = viewModel::openResetDialog,
                 )
-            }
-        }
-        Spacer(Modifier.height(22.dp))
-        SectionLabel(stringResource(FeatureR.string.about))
-        Spacer(Modifier.height(10.dp))
-        Surface(color = Panel, shape = RoundedCornerShape(13.dp), modifier = Modifier.fillMaxWidth()) {
-            Column {
-                SettingRow(stringResource(FeatureR.string.version), "Heartrace")
-                SettingRow(stringResource(FeatureR.string.reset_today), stringResource(FeatureR.string.reset_hint), onClick = viewModel::openResetDialog)
-            }
-        }
+            },
+        )
     }
     if (state.isResetDialogVisible) {
         AlertDialog(
@@ -252,5 +210,80 @@ fun YouScreen(
             },
             dismissButton = { TextButton(onClick = ::discardDraftAvatar) { Text(stringResource(FeatureR.string.cancel), color = Muted) } },
         )
+    }
+}
+
+@Composable
+private fun PreferencesPane(
+    settings: me.heartrace.feature.shell.AppSettingsUiState,
+    settingsViewModel: AppSettingsViewModel,
+    onReminderChanged: (Boolean) -> Unit,
+) {
+    SectionLabel(stringResource(FeatureR.string.preferences))
+    Spacer(Modifier.height(10.dp))
+    Surface(color = Panel, shape = RoundedCornerShape(13.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(15.dp)) {
+            Text(stringResource(FeatureR.string.language), color = Cream, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(3.dp))
+            Text(stringResource(FeatureR.string.language_hint), color = Muted, fontSize = 12.sp)
+            Spacer(Modifier.height(13.dp))
+            SlidingSegmentedControl(
+                options = listOf(
+                    SegmentedOption(AppLanguage.SYSTEM, stringResource(FeatureR.string.language_system)),
+                    SegmentedOption(AppLanguage.ENGLISH, stringResource(FeatureR.string.language_english)),
+                    SegmentedOption(AppLanguage.CHINESE, stringResource(FeatureR.string.language_chinese)),
+                ),
+                selectedOption = settings.language,
+                onOptionSelected = settingsViewModel::setLanguage,
+            )
+        }
+    }
+    Spacer(Modifier.height(22.dp))
+    SectionLabel(stringResource(FeatureR.string.reminders))
+    Spacer(Modifier.height(10.dp))
+    Surface(color = Panel, shape = RoundedCornerShape(13.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(FeatureR.string.reminder_title), color = Cream, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(3.dp))
+                Text(stringResource(FeatureR.string.reminder_hint), color = Muted, fontSize = 12.sp)
+            }
+            Switch(checked = settings.remindersEnabled, onCheckedChange = onReminderChanged)
+        }
+    }
+}
+
+@Composable
+private fun AppearancePane(
+    settings: me.heartrace.feature.shell.AppSettingsUiState,
+    settingsViewModel: AppSettingsViewModel,
+    onReset: () -> Unit,
+) {
+    SectionLabel(stringResource(FeatureR.string.appearance))
+    Spacer(Modifier.height(10.dp))
+    Surface(color = Panel, shape = RoundedCornerShape(13.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(15.dp)) {
+            Text(stringResource(FeatureR.string.appearance), color = Cream, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(3.dp))
+            Text(stringResource(FeatureR.string.appearance_hint), color = Muted, fontSize = 12.sp)
+            Spacer(Modifier.height(13.dp))
+            SlidingSegmentedControl(
+                options = listOf(
+                    SegmentedOption(false, stringResource(FeatureR.string.theme_dark)),
+                    SegmentedOption(true, stringResource(FeatureR.string.theme_light)),
+                ),
+                selectedOption = settings.lightTheme,
+                onOptionSelected = settingsViewModel::setLightTheme,
+            )
+        }
+    }
+    Spacer(Modifier.height(22.dp))
+    SectionLabel(stringResource(FeatureR.string.about))
+    Spacer(Modifier.height(10.dp))
+    Surface(color = Panel, shape = RoundedCornerShape(13.dp), modifier = Modifier.fillMaxWidth()) {
+        Column {
+            SettingRow(stringResource(FeatureR.string.version), "Heartrace")
+            SettingRow(stringResource(FeatureR.string.reset_today), stringResource(FeatureR.string.reset_hint), onClick = onReset)
+        }
     }
 }

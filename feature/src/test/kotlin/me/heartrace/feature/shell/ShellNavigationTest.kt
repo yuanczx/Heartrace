@@ -14,4 +14,11 @@ class ShellNavigationTest {
         assertEquals(AppTab.INSIGHTS, HeartraceDestination.Insights.toAppTab())
         assertEquals(AppTab.YOU, HeartraceDestination.You.toAppTab())
     }
+
+    @Test
+    fun navigation_rail_is_used_from_compact_tablet_width() {
+        assertEquals(false, shouldUseNavigationRail(NAVIGATION_RAIL_BREAKPOINT_DP - 1))
+        assertEquals(true, shouldUseNavigationRail(NAVIGATION_RAIL_BREAKPOINT_DP))
+        assertEquals(true, shouldUseNavigationRail(1024))
+    }
 }

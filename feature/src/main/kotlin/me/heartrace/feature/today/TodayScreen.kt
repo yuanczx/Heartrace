@@ -42,6 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import me.heartrace.data.MoodRecord
+import me.heartrace.ui.components.AdaptiveTwoPane
 import me.heartrace.ui.components.AttachmentSelectorBar
 import me.heartrace.ui.components.Coral
 import me.heartrace.ui.components.Cream
@@ -86,62 +88,23 @@ fun TodayScreen(viewModel: TodayViewModel = hiltViewModel()) {
             fontSize = 14.sp,
         )
         Spacer(Modifier.height(23.dp))
-        SectionLabel(stringResource(R.string.mood_scale))
-        Spacer(Modifier.height(6.dp))
-        Surface(color = Panel, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 13.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(moodLabel(state.moodValue), color = Cream, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
-                    Text("${state.moodValue}/100", color = Muted, fontSize = 12.sp)
-                }
-                Slider(
-                    value = state.moodValue.toFloat(),
-                    onValueChange = viewModel::setMoodValue,
-                    valueRange = 0f..100f,
-                    colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = Coral, activeTrackColor = Coral, inactiveTrackColor = PanelLight),
+        AdaptiveTwoPane(
+            compactSpacing = 25.dp,
+            first = {
+                TodayCheckInPane(
+                    state = state,
+                    onMoodValueChange = viewModel::setMoodValue,
+                    onEnergyLevelChange = viewModel::setEnergyLevel,
+                    onSave = viewModel::saveCheckIn,
                 )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.mood_low_end), color = Muted, fontSize = 11.sp)
-                    Text(stringResource(R.string.mood_high_end), color = Muted, fontSize = 11.sp)
-                }
-            }
-        }
-        Spacer(Modifier.height(18.dp))
-        SectionLabel(stringResource(R.string.energy_level))
-        Spacer(Modifier.height(6.dp))
-        EnergyChoices(
-            options = listOf(
-                EnergyChoiceOption(1, stringResource(R.string.energy_low)),
-                EnergyChoiceOption(2, stringResource(R.string.energy_medium)),
-                EnergyChoiceOption(3, stringResource(R.string.energy_high)),
-            ),
-            selectedLevel = state.energyLevel,
-            onSelect = viewModel::setEnergyLevel,
+            },
+            second = {
+                TodayTimelinePane(
+                    records = state.todayMoodRecords,
+                    onEditRecord = viewModel::startEditRecord,
+                )
+            },
         )
-        Spacer(Modifier.height(17.dp))
-        Button(onClick = viewModel::saveCheckIn, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(11.dp), colors = ButtonDefaults.buttonColors(containerColor = Coral, contentColor = Ink)) {
-            Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.save_check_in), fontWeight = FontWeight.Bold)
-        }
-        state.errorMessage?.let {
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.save_failed), color = Coral, fontSize = 12.sp)
-        }
-        Spacer(Modifier.height(25.dp))
-        EnergySection(records = state.todayMoodRecords)
-        Spacer(Modifier.height(25.dp))
-        SectionLabel(stringResource(R.string.today_timeline))
-        Spacer(Modifier.height(9.dp))
-        if (state.todayMoodRecords.isEmpty()) {
-            Surface(color = Panel, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.empty_timeline), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(16.dp))
-            }
-        } else {
-            state.todayMoodRecords.sortedByDescending { it.recordedAt }.forEach { record ->
-                MoodRecordRow(record = record, showDate = false, onLongClick = { viewModel.startEditRecord(record) })
-            }
-        }
     }
 
     if (state.pendingMomentForId != null) {
@@ -232,5 +195,76 @@ fun TodayScreen(viewModel: TodayViewModel = hiltViewModel()) {
                 viewModel.deleteRecord(record.id)
             },
         )
+    }
+}
+
+@Composable
+private fun TodayCheckInPane(
+    state: TodayUiState,
+    onMoodValueChange: (Float) -> Unit,
+    onEnergyLevelChange: (Int) -> Unit,
+    onSave: () -> Unit,
+) {
+    SectionLabel(stringResource(R.string.mood_scale))
+    Spacer(Modifier.height(6.dp))
+    Surface(color = Panel, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 13.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(moodLabel(state.moodValue), color = Cream, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+                Text("${state.moodValue}/100", color = Muted, fontSize = 12.sp)
+            }
+            Slider(
+                value = state.moodValue.toFloat(),
+                onValueChange = onMoodValueChange,
+                valueRange = 0f..100f,
+                colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = Coral, activeTrackColor = Coral, inactiveTrackColor = PanelLight),
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(stringResource(R.string.mood_low_end), color = Muted, fontSize = 11.sp)
+                Text(stringResource(R.string.mood_high_end), color = Muted, fontSize = 11.sp)
+            }
+        }
+    }
+    Spacer(Modifier.height(18.dp))
+    SectionLabel(stringResource(R.string.energy_level))
+    Spacer(Modifier.height(6.dp))
+    EnergyChoices(
+        options = listOf(
+            EnergyChoiceOption(1, stringResource(R.string.energy_low)),
+            EnergyChoiceOption(2, stringResource(R.string.energy_medium)),
+            EnergyChoiceOption(3, stringResource(R.string.energy_high)),
+        ),
+        selectedLevel = state.energyLevel,
+        onSelect = onEnergyLevelChange,
+    )
+    Spacer(Modifier.height(17.dp))
+    Button(onClick = onSave, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(11.dp), colors = ButtonDefaults.buttonColors(containerColor = Coral, contentColor = Ink)) {
+        Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(R.string.save_check_in), fontWeight = FontWeight.Bold)
+    }
+    state.errorMessage?.let {
+        Spacer(Modifier.height(8.dp))
+        Text(stringResource(R.string.save_failed), color = Coral, fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun TodayTimelinePane(
+    records: List<MoodRecord>,
+    onEditRecord: (MoodRecord) -> Unit,
+) {
+    EnergySection(records = records)
+    Spacer(Modifier.height(25.dp))
+    SectionLabel(stringResource(R.string.today_timeline))
+    Spacer(Modifier.height(9.dp))
+    if (records.isEmpty()) {
+        Surface(color = Panel, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.empty_timeline), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(16.dp))
+        }
+    } else {
+        records.sortedByDescending { it.recordedAt }.forEach { record ->
+            MoodRecordRow(record = record, showDate = false, onLongClick = { onEditRecord(record) })
+        }
     }
 }
