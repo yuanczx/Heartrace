@@ -48,6 +48,28 @@ class PatternsViewModelTest {
     }
 
     @Test
+    fun daily_summaries_keep_mood_trend_when_energy_is_missing() = runTest {
+        val now = System.currentTimeMillis()
+        val repository = FakeHeartraceDataSource().apply {
+            insights.value = InsightsDataSnapshot(
+                records = listOf(
+                    MoodRecord(1, Mood.QUIET, 40, null, now - 86_400_000L),
+                    MoodRecord(2, Mood.BRIGHT, 72, null, now - 1_000L),
+                ),
+                recentRecords = listOf(
+                    MoodRecord(1, Mood.QUIET, 40, null, now - 86_400_000L),
+                    MoodRecord(2, Mood.BRIGHT, 72, null, now - 1_000L),
+                ),
+            )
+        }
+        val viewModel = PatternsViewModel(repository)
+        advanceUntilIdle()
+
+        assertEquals(2, viewModel.uiState.dailySummaries.size)
+        assertTrue(viewModel.uiState.dailySummaries.all { it.averageEnergy == null })
+    }
+
+    @Test
     fun date_and_range_navigation_is_bounded_to_today() = runTest {
         val now = System.currentTimeMillis()
         val yesterday = Calendar.getInstance().apply {
@@ -84,5 +106,37 @@ class PatternsViewModelTest {
         viewModel.deleteRecord(9)
         advanceUntilIdle()
         assertEquals(listOf(9L), repository.deletedRecordIds)
+    }
+
+    @Test
+    fun editing_failure_keeps_record_open_and_reports_error() = runTest {
+        val repository = FakeHeartraceDataSource().apply {
+            updateCheckInError = IllegalStateException()
+        }
+        val viewModel = PatternsViewModel(repository)
+        val record = MoodRecord(9, Mood.LOW, 20, 1, System.currentTimeMillis())
+        viewModel.startEditRecord(record)
+
+        viewModel.updateRecord(9, 70, 3, "updated", 123L)
+        advanceUntilIdle()
+
+        assertEquals(record, viewModel.uiState.editingRecord)
+        assertEquals("save_failed", viewModel.uiState.errorMessage)
+    }
+
+    @Test
+    fun delete_failure_keeps_record_open_and_reports_error() = runTest {
+        val repository = FakeHeartraceDataSource().apply {
+            deleteCheckInError = IllegalStateException()
+        }
+        val viewModel = PatternsViewModel(repository)
+        val record = MoodRecord(9, Mood.LOW, 20, 1, System.currentTimeMillis())
+        viewModel.startEditRecord(record)
+
+        viewModel.deleteRecord(9)
+        advanceUntilIdle()
+
+        assertEquals(record, viewModel.uiState.editingRecord)
+        assertEquals("save_failed", viewModel.uiState.errorMessage)
     }
 }

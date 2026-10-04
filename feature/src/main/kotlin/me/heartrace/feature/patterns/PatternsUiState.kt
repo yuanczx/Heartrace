@@ -27,9 +27,9 @@ data class PatternsUiState(
     val recordCount: Int = 0,
     val weeklyGoal: WeeklyGoalProgress = WeeklyGoalProgress(5, 0, 5, false),
     val currentStreak: Int = 0,
-    val badges: List<BadgeStatus> = emptyList(),
     val selectedDateStart: Long = 0L,
     val historyRange: HistoryRange = HistoryRange.DAY,
     val canGoToNextDate: Boolean = false,
     val editingRecord: MoodRecord? = null,
+    val errorMessage: String? = null,
 )

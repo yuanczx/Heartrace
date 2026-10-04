@@ -49,10 +49,12 @@ internal fun DailyTrendChart(summaries: List<DailyRecordSummary>) {
                 val x = if (count == 1) xPadding + usableWidth / 2f else xPadding + usableWidth * (index.toFloat() / (count - 1))
                 Offset(x, yPadding + usableHeight * (1f - (summary.averageMood / 100f).coerceIn(0f, 1f)))
             }
-            if (count == 1 && energyCoords.isNotEmpty()) {
-                val ep = energyCoords.first()
+            if (count == 1) {
+                if (energyCoords.isNotEmpty()) {
+                    val ep = energyCoords.first()
+                    drawLine(mintColor.copy(alpha = 0.25f), Offset(xPadding, ep.y), Offset(size.width - xPadding, ep.y), 1.5f)
+                }
                 val mp = moodCoords.first()
-                drawLine(mintColor.copy(alpha = 0.25f), Offset(xPadding, ep.y), Offset(size.width - xPadding, ep.y), 1.5f)
                 drawLine(coralColor.copy(alpha = 0.25f), Offset(xPadding, mp.y), Offset(size.width - xPadding, mp.y), 1.5f)
             }
             if (count > 1 && energyCoords.size > 1) {
@@ -64,6 +66,8 @@ internal fun DailyTrendChart(summaries: List<DailyRecordSummary>) {
                 drawPath(energyArea, color = mintColor.copy(alpha = .08f))
                 val energyLine = smoothCubicPath(energyCoords)
                 drawPath(energyLine, color = mintColor, style = Stroke(width = 2.5f, cap = StrokeCap.Round))
+            }
+            if (count > 1 && moodCoords.size > 1) {
                 val moodArea = smoothCubicPath(moodCoords).apply {
                     lineTo(moodCoords.last().x, yPadding + usableHeight)
                     lineTo(moodCoords.first().x, yPadding + usableHeight)

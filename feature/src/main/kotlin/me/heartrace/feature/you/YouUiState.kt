@@ -1,5 +1,8 @@
 package me.heartrace.feature.you
 
+import me.heartrace.feature.patterns.BadgeKind
+import me.heartrace.feature.patterns.BadgeStatus
+
 data class YouUiState(
     val isResetDialogVisible: Boolean = false,
     val isProfileDialogVisible: Boolean = false,
@@ -8,4 +11,7 @@ data class YouUiState(
     val draftNickname: String = "",
     val draftAvatarUri: String? = null,
     val isCopyingAvatar: Boolean = false,
+    val badges: List<BadgeStatus> = emptyList(),
+    val badgeCelebration: List<BadgeKind> = emptyList(),
+    val isAchievementsVisible: Boolean = false,
 )

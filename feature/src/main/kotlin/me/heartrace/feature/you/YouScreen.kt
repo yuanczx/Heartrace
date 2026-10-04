@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,7 +48,6 @@ import me.heartrace.feature.shell.AppSettingsViewModel
 import me.heartrace.ui.components.AdaptiveTwoPane
 import me.heartrace.ui.components.Coral
 import me.heartrace.ui.components.Cream
-import me.heartrace.ui.components.Header
 import me.heartrace.ui.components.Muted
 import me.heartrace.ui.components.Panel
 import me.heartrace.ui.components.PanelLight
@@ -65,6 +66,36 @@ fun YouScreen(
 ) {
     val state = viewModel.uiState
     val settings = settingsViewModel.uiState
+    Crossfade(
+        targetState = state.isAchievementsVisible,
+        animationSpec = tween(durationMillis = 260),
+        label = "you page transition",
+    ) { showAchievements ->
+        if (showAchievements) {
+            AchievementsScreen(
+                badges = state.badges,
+                celebration = state.badgeCelebration,
+                onBack = viewModel::closeAchievements,
+                onDismissCelebration = viewModel::dismissBadgeCelebration,
+            )
+        } else {
+            YouSettingsContent(
+                settingsViewModel = settingsViewModel,
+                viewModel = viewModel,
+                state = state,
+                settings = settings,
+            )
+        }
+    }
+}
+
+@Composable
+private fun YouSettingsContent(
+    settingsViewModel: AppSettingsViewModel,
+    viewModel: YouViewModel,
+    state: YouUiState,
+    settings: me.heartrace.feature.shell.AppSettingsUiState,
+) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val displayedNickname = state.nickname.ifBlank {
@@ -117,8 +148,6 @@ fun YouScreen(
         }
     }
     Column {
-        Header(stringResource(FeatureR.string.nav_you))
-        Spacer(Modifier.height(27.dp))
         Row(
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClick = viewModel::openProfileDialog).padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -135,13 +164,18 @@ fun YouScreen(
         AdaptiveTwoPane(
             compactSpacing = 22.dp,
             first = {
+                AchievementEntryCard(
+                    badges = state.badges,
+                    onClick = viewModel::openAchievements,
+                )
+            },
+            second = {
                 PreferencesPane(
                     settings = settings,
                     settingsViewModel = settingsViewModel,
                     onReminderChanged = onReminderChanged,
                 )
-            },
-            second = {
+                Spacer(Modifier.height(22.dp))
                 AppearancePane(
                     settings = settings,
                     settingsViewModel = settingsViewModel,

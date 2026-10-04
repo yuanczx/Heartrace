@@ -64,8 +64,13 @@ constructor(
             stateDao.observe(),
             moodEntryDao.observeBetween(todayStart, Long.MAX_VALUE),
             minuteTicker(),
-        ) { notes, state, moodEntries, now ->
-            buildTodaySnapshot(notes, state, moodEntries, now)
+        ) { notes, state, moodEntries, _ ->
+            // The ticker only triggers a refresh. Its emitted timestamp may be
+            // older than a record written since the last tick, which would
+            // make buildTodaySnapshot filter that record (and any other recent
+            // records) out after an update. Read the clock at emission time so
+            // database invalidations always build a current snapshot.
+            buildTodaySnapshot(notes, state, moodEntries, System.currentTimeMillis())
         }
     }
 

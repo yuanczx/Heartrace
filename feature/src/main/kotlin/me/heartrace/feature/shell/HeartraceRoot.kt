@@ -128,6 +128,7 @@ internal fun HeartraceRoot(settingsViewModel: AppSettingsViewModel) {
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
+                    beyondViewportPageCount = 1,
                     verticalAlignment = Alignment.Top,
                 ) { page ->
                     val entry = decoratedEntries.getOrNull(page)

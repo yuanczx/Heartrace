@@ -154,7 +154,10 @@ constructor(
                     audioDurationMs = audioDurationMs,
                 )
             }
-                .onSuccess { uiState = uiState.copy(isUpdatingRecord = false, editingRecord = null) }
+                .onSuccess {
+                    uiState = uiState.copy(isUpdatingRecord = false, editingRecord = null)
+                    refreshTodaySnapshot()
+                }
                 .onFailure { uiState = uiState.copy(isUpdatingRecord = false, errorMessage = "save_failed") }
         }
     }
@@ -164,7 +167,10 @@ constructor(
         uiState = uiState.copy(isUpdatingRecord = true, errorMessage = null)
         viewModelScope.launch {
             runCatching { repository.deleteCheckIn(id) }
-                .onSuccess { uiState = uiState.copy(isUpdatingRecord = false, editingRecord = null) }
+                .onSuccess {
+                    uiState = uiState.copy(isUpdatingRecord = false, editingRecord = null)
+                    refreshTodaySnapshot()
+                }
                 .onFailure { uiState = uiState.copy(isUpdatingRecord = false, errorMessage = "save_failed") }
         }
     }

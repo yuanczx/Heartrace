@@ -3,8 +3,13 @@ package me.heartrace.data
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import me.heartrace.data.db.DailyNoteEntity
 import me.heartrace.data.db.HeartraceDatabase
 import me.heartrace.data.db.MoodEntryEntity
@@ -96,6 +101,50 @@ class HeartraceRepositoryTest {
         assertEquals(3, snapshot.todayMoodRecords.single().energyLevel)
         assertTrue(snapshot.todayNotes.isEmpty())
         assertNull(database.dailyNoteDao().findByMoodEntryId(id))
+    }
+
+    @Test
+    fun observeToday_uses_current_time_when_a_record_is_updated() = runBlocking {
+        val snapshots = Channel<TodayDataSnapshot>(Channel.UNLIMITED)
+        val observer = launch {
+            repository.observeToday().collect { snapshots.send(it) }
+        }
+
+        try {
+            snapshots.receive()
+            delay(20)
+            val firstId = repository.saveCheckIn(
+                moodValue = 40,
+                energyLevel = 2,
+                recordedAt = System.currentTimeMillis(),
+            )
+            repository.saveCheckIn(
+                moodValue = 72,
+                energyLevel = 3,
+                recordedAt = System.currentTimeMillis(),
+            )
+            assertEquals(2, repository.loadTodaySnapshot().todayMoodRecords.size)
+            while (snapshots.tryReceive().isSuccess) {
+                // Drain snapshots caused by the two inserts before testing the update.
+            }
+
+            repository.updateCheckIn(
+                id = firstId,
+                moodValue = 55,
+                energyLevel = 2,
+                momentText = null,
+                recordedAt = System.currentTimeMillis(),
+            )
+
+            withTimeout(2_000) {
+                while (true) {
+                    if (snapshots.receive().todayMoodRecords.size == 2) break
+                }
+            }
+        } finally {
+            observer.cancel()
+            snapshots.close()
+        }
     }
 
     @Test

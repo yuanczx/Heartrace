@@ -18,6 +18,9 @@ enum class BadgeKind {
     TEN_RECORDS,
     FIRST_WEEKLY_GOAL,
     FOUR_WEEKLY_GOALS,
+    MOOD_EXPLORER,
+    MOMENT_KEEPER,
+    THIRTY_RECORDS,
 }
 
 data class BadgeStatus(
@@ -62,6 +65,10 @@ fun calculateCurrentStreak(records: List<MoodRecord>, now: Long): Int {
 fun calculateBadges(records: List<MoodRecord>, now: Long, goalDays: Int): List<BadgeStatus> {
     val streak = calculateLongestStreak(records)
     val weeklyGoals = completedWeeklyGoals(records, now, goalDays)
+    val moodVariety = records.map { it.mood }.toSet().size
+    val moments = records.count {
+        !it.momentText.isNullOrBlank() || it.imageUris.isNotEmpty() || !it.audioUri.isNullOrBlank()
+    }
     return listOf(
         BadgeStatus(BadgeKind.FIRST_RECORD, records.isNotEmpty()),
         BadgeStatus(BadgeKind.THREE_DAY_STREAK, streak >= 3),
@@ -70,6 +77,9 @@ fun calculateBadges(records: List<MoodRecord>, now: Long, goalDays: Int): List<B
         BadgeStatus(BadgeKind.TEN_RECORDS, records.size >= 10),
         BadgeStatus(BadgeKind.FIRST_WEEKLY_GOAL, weeklyGoals >= 1),
         BadgeStatus(BadgeKind.FOUR_WEEKLY_GOALS, weeklyGoals >= 4),
+        BadgeStatus(BadgeKind.MOOD_EXPLORER, moodVariety >= 5),
+        BadgeStatus(BadgeKind.MOMENT_KEEPER, moments >= 3),
+        BadgeStatus(BadgeKind.THIRTY_RECORDS, records.size >= 30),
     )
 }
 

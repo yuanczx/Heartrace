@@ -36,7 +36,6 @@ import me.heartrace.ui.components.AdaptiveTwoPane
 import me.heartrace.ui.components.AttachmentSelectorBar
 import me.heartrace.ui.components.Coral
 import me.heartrace.ui.components.Cream
-import me.heartrace.ui.components.Header
 import me.heartrace.ui.components.Ink
 import me.heartrace.ui.components.Muted
 import me.heartrace.ui.components.Panel
@@ -51,8 +50,6 @@ fun TodayScreen(viewModel: TodayViewModel = hiltViewModel()) {
     val state = viewModel.uiState
     val context = LocalContext.current
     Column {
-        Header(stringResource(R.string.nav_today))
-        Spacer(Modifier.height(25.dp))
         Text(stringResource(R.string.today_check_in_title), color = Cream, fontSize = 29.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(5.dp))
         Text(

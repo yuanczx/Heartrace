@@ -1,17 +1,11 @@
 package me.heartrace.feature.patterns
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,7 +19,6 @@ import me.heartrace.feature.today.EditRecordSheet
 import me.heartrace.feature.today.MoodRecordRow
 import me.heartrace.ui.components.AdaptiveTwoPane
 import me.heartrace.ui.components.Cream
-import me.heartrace.ui.components.Header
 import me.heartrace.ui.components.Muted
 import me.heartrace.ui.components.Panel
 import me.heartrace.ui.components.SectionLabel
@@ -35,8 +28,6 @@ import me.heartrace.uikit.R
 fun PatternsScreen(viewModel: PatternsViewModel = hiltViewModel()) {
     val state = viewModel.uiState
     Column {
-        Header(stringResource(R.string.nav_insights))
-        Spacer(Modifier.height(25.dp))
         Text(stringResource(R.string.insights_title), color = Cream, fontSize = 29.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(5.dp))
         Text(stringResource(R.string.insights_subtitle), color = Muted, fontSize = 14.sp)
@@ -66,6 +57,7 @@ fun PatternsScreen(viewModel: PatternsViewModel = hiltViewModel()) {
                 viewModel.updateRecord(record.id, moodValue, energyLevel, momentText, recordedAt, imageUris, audioUri, audioDurationMs)
             },
             onDelete = { viewModel.deleteRecord(record.id) },
+            errorMessage = state.errorMessage,
         )
     }
 }
@@ -102,8 +94,6 @@ private fun InsightsOverviewPane(state: PatternsUiState) {
     }
     Spacer(Modifier.height(23.dp))
     DailyTrendSection(summaries = state.dailySummaries)
-    Spacer(Modifier.height(23.dp))
-    BadgesCard(state.badges)
 }
 
 @Composable
@@ -128,45 +118,6 @@ private fun WeeklyGoalCard(progress: WeeklyGoalProgress) {
                 color = Muted,
                 fontSize = 12.sp,
             )
-        }
-    }
-}
-
-@Composable
-private fun BadgesCard(badges: List<BadgeStatus>) {
-    Column {
-        SectionLabel(stringResource(R.string.badges_title))
-        Spacer(Modifier.height(9.dp))
-        Surface(color = Panel, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
-                badges.forEach { badge ->
-                    val title = when (badge.kind) {
-                        BadgeKind.FIRST_RECORD -> stringResource(R.string.badge_first_record)
-                        BadgeKind.THREE_DAY_STREAK -> stringResource(R.string.badge_three_day_streak)
-                        BadgeKind.SEVEN_DAY_STREAK -> stringResource(R.string.badge_seven_day_streak)
-                        BadgeKind.FOURTEEN_DAY_STREAK -> stringResource(R.string.badge_fourteen_day_streak)
-                        BadgeKind.TEN_RECORDS -> stringResource(R.string.badge_ten_records)
-                        BadgeKind.FIRST_WEEKLY_GOAL -> stringResource(R.string.badge_first_weekly_goal)
-                        BadgeKind.FOUR_WEEKLY_GOALS -> stringResource(R.string.badge_four_weekly_goals)
-                    }
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 7.dp),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = if (badge.earned) Icons.Outlined.CheckCircle else Icons.Outlined.Lock,
-                            contentDescription = title,
-                            tint = if (badge.earned) me.heartrace.ui.components.Coral else Muted,
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            if (badge.earned) title else stringResource(R.string.badge_locked, title),
-                            color = if (badge.earned) Cream else Muted,
-                            fontSize = 13.sp,
-                        )
-                    }
-                }
-            }
         }
     }
 }

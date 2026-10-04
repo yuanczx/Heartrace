@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import me.heartrace.data.HeartraceDataSource
+import me.heartrace.feature.patterns.BadgeKind
+import me.heartrace.feature.patterns.calculateBadges
 import javax.inject.Inject
 
 @HiltViewModel
@@ -18,6 +20,9 @@ constructor(
 ) : ViewModel() {
     var uiState by mutableStateOf(YouUiState())
         private set
+
+    private var hasObservedInitialBadges = false
+    private var previouslyEarnedBadges: Set<BadgeKind> = emptySet()
 
     init {
         viewModelScope.launch {
@@ -30,6 +35,35 @@ constructor(
                 )
             }
         }
+        viewModelScope.launch {
+            repository.observeInsights().collect { snapshot ->
+                val badges = calculateBadges(snapshot.records, System.currentTimeMillis(), snapshot.weeklyGoalDays)
+                val earnedBadges = badges.filter { it.earned }.map { it.kind }.toSet()
+                val newlyEarnedBadges = if (hasObservedInitialBadges) {
+                    (earnedBadges - previouslyEarnedBadges).toList()
+                } else {
+                    emptyList()
+                }
+                previouslyEarnedBadges = earnedBadges
+                hasObservedInitialBadges = true
+                uiState = uiState.copy(
+                    badges = badges,
+                    badgeCelebration = newlyEarnedBadges.ifEmpty { uiState.badgeCelebration },
+                )
+            }
+        }
+    }
+
+    fun dismissBadgeCelebration() {
+        uiState = uiState.copy(badgeCelebration = emptyList())
+    }
+
+    fun openAchievements() {
+        uiState = uiState.copy(isAchievementsVisible = true)
+    }
+
+    fun closeAchievements() {
+        uiState = uiState.copy(isAchievementsVisible = false)
     }
 
     fun openProfileDialog() {

@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import me.heartrace.data.HeartraceDataSource
 import me.heartrace.data.InsightsDataSnapshot
@@ -114,11 +115,11 @@ constructor(
             recordCount = periodRecords.size,
             weeklyGoal = calculateWeeklyGoalProgress(snapshot.records, now, snapshot.weeklyGoalDays),
             currentStreak = calculateCurrentStreak(snapshot.records, now),
-            badges = calculateBadges(snapshot.records, now, snapshot.weeklyGoalDays),
             selectedDateStart = selectedDay,
             historyRange = historyRange,
             canGoToNextDate = periodStart(selectedDay) < periodStart(todayStart),
             editingRecord = uiState.editingRecord,
+            errorMessage = uiState.errorMessage,
         )
     }
 
@@ -146,11 +147,11 @@ constructor(
     }.timeInMillis
 
     fun startEditRecord(record: MoodRecord) {
-        uiState = uiState.copy(editingRecord = record)
+        uiState = uiState.copy(editingRecord = record, errorMessage = null)
     }
 
     fun dismissEditRecord() {
-        uiState = uiState.copy(editingRecord = null)
+        uiState = uiState.copy(editingRecord = null, errorMessage = null)
     }
 
     fun updateRecord(
@@ -163,25 +164,39 @@ constructor(
         audioUri: String? = null,
         audioDurationMs: Long = 0L,
     ) {
+        uiState = uiState.copy(errorMessage = null)
         viewModelScope.launch {
-            repository.updateCheckIn(
-                id = id,
-                moodValue = moodValue,
-                energyLevel = energyLevel,
-                momentText = momentText,
-                recordedAt = recordedAt,
-                imageUris = imageUris,
-                audioUri = audioUri,
-                audioDurationMs = audioDurationMs,
-            )
-            dismissEditRecord()
+            try {
+                repository.updateCheckIn(
+                    id = id,
+                    moodValue = moodValue,
+                    energyLevel = energyLevel,
+                    momentText = momentText,
+                    recordedAt = recordedAt,
+                    imageUris = imageUris,
+                    audioUri = audioUri,
+                    audioDurationMs = audioDurationMs,
+                )
+                dismissEditRecord()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                uiState = uiState.copy(errorMessage = "save_failed")
+            }
         }
     }
 
     fun deleteRecord(id: Long) {
+        uiState = uiState.copy(errorMessage = null)
         viewModelScope.launch {
-            repository.deleteCheckIn(id)
-            dismissEditRecord()
+            try {
+                repository.deleteCheckIn(id)
+                dismissEditRecord()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                uiState = uiState.copy(errorMessage = "save_failed")
+            }
         }
     }
 }

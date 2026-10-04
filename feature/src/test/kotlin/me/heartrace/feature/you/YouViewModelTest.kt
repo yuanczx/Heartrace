@@ -3,6 +3,10 @@ package me.heartrace.feature.you
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import me.heartrace.data.InsightsDataSnapshot
+import me.heartrace.data.Mood
+import me.heartrace.data.MoodRecord
+import me.heartrace.feature.patterns.BadgeKind
 import me.heartrace.feature.testing.FakeHeartraceDataSource
 import me.heartrace.feature.testing.MainDispatcherRule
 import org.junit.Assert.assertEquals
@@ -43,5 +47,22 @@ class YouViewModelTest {
         assertTrue(viewModel.uiState.isCopyingAvatar)
         viewModel.resetToday()
         advanceUntilIdle()
+    }
+
+    @Test
+    fun badges_are_derived_for_the_you_page() = runTest {
+        val repository = FakeHeartraceDataSource().apply {
+            insights.value = InsightsDataSnapshot(
+                records = listOf(MoodRecord(1, Mood.BRIGHT, 72, 3, System.currentTimeMillis())),
+            )
+        }
+        val viewModel = YouViewModel(repository)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.badges.first { it.kind == BadgeKind.FIRST_RECORD }.earned)
+        viewModel.openAchievements()
+        assertTrue(viewModel.uiState.isAchievementsVisible)
+        viewModel.closeAchievements()
+        assertFalse(viewModel.uiState.isAchievementsVisible)
     }
 }

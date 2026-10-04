@@ -85,6 +85,7 @@ fun EditRecordSheet(
         audioDurationMs: Long,
     ) -> Unit,
     onDelete: () -> Unit,
+    errorMessage: String? = null,
 ) {
     var moodValue by remember(record) { mutableIntStateOf(record.moodValue) }
     var energyLevel by remember(record) { mutableStateOf(record.energyLevel) }
@@ -371,6 +372,10 @@ fun EditRecordSheet(
                             audioDurationMs = 0L
                         },
                     )
+                    errorMessage?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(stringResource(R.string.save_failed), color = Coral, fontSize = 12.sp)
+                    }
                     Spacer(Modifier.height(18.dp))
                     Row(
                         Modifier.fillMaxWidth(),

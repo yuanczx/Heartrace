@@ -2,6 +2,7 @@ package me.heartrace.feature.patterns
 
 import me.heartrace.data.Mood
 import me.heartrace.data.MoodRecord
+import me.heartrace.data.toMoodValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -72,5 +73,41 @@ class AwarenessMetricsTest {
             (0..4).map { day -> MoodRecord((week * 7 + day).toLong(), Mood.STEADY, 55, 2, shiftDays(monday, week * 7 + day)) }
         }
         assertTrue(!calculateBadges(records, now, 5).first { it.kind == BadgeKind.FOUR_WEEKLY_GOALS }.earned)
+    }
+
+    @Test
+    fun badges_reward_mood_variety_and_saved_moments() {
+        val now = System.currentTimeMillis()
+        val moods = listOf(Mood.DRAINED, Mood.QUIET, Mood.STEADY, Mood.BRIGHT, Mood.ELECTRIC)
+        val records = moods.mapIndexed { index, mood ->
+            MoodRecord(index.toLong(), mood, mood.toMoodValue(), 2, dayOffset(now, -index), momentText = if (index < 3) "A small note" else null)
+        }
+
+        val badges = calculateBadges(records, now, goalDays = 5)
+
+        assertTrue(badges.first { it.kind == BadgeKind.MOOD_EXPLORER }.earned)
+        assertTrue(badges.first { it.kind == BadgeKind.MOMENT_KEEPER }.earned)
+        assertTrue(!badges.first { it.kind == BadgeKind.THIRTY_RECORDS }.earned)
+    }
+
+    @Test
+    fun moment_keeper_counts_attachment_only_moments() {
+        val now = System.currentTimeMillis()
+        val records = (0..2).map { index ->
+            MoodRecord(
+                id = index.toLong(),
+                mood = Mood.STEADY,
+                moodValue = Mood.STEADY.toMoodValue(),
+                energyLevel = 2,
+                recordedAt = dayOffset(now, -index),
+                imageUris = if (index == 0) listOf("file://image") else emptyList(),
+                audioUri = if (index == 1) "file://audio" else null,
+                momentText = if (index == 2) "Saved moment" else null,
+            )
+        }
+
+        val badges = calculateBadges(records, now, goalDays = 5)
+
+        assertTrue(badges.first { it.kind == BadgeKind.MOMENT_KEEPER }.earned)
     }
 }

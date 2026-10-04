@@ -22,6 +22,8 @@ class FakeHeartraceDataSource : HeartraceDataSource {
     var saveCheckInError: Throwable? = null
     var saveMomentError: Throwable? = null
     var saveNoteError: Throwable? = null
+    var updateCheckInError: Throwable? = null
+    var deleteCheckInError: Throwable? = null
 
     data class CheckInCall(val moodValue: Int, val energyLevel: Int?, val momentText: String? = null)
 
@@ -108,10 +110,12 @@ class FakeHeartraceDataSource : HeartraceDataSource {
         audioUri: String?,
         audioDurationMs: Long,
     ) {
+        updateCheckInError?.let { throw it }
         updatedRecords += UpdateCall(id, moodValue, energyLevel, momentText, recordedAt)
     }
 
     override suspend fun deleteCheckIn(id: Long) {
+        deleteCheckInError?.let { throw it }
         deletedRecordIds += id
     }
 
