@@ -21,6 +21,7 @@ fun AdaptiveTwoPane(
     compactSpacing: Dp = 24.dp,
     first: @Composable ColumnScope.() -> Unit,
     second: @Composable ColumnScope.() -> Unit,
+    compact: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
         if (maxWidth >= minTwoPaneWidth) {
@@ -31,9 +32,13 @@ fun AdaptiveTwoPane(
             }
         } else {
             Column(Modifier.fillMaxWidth()) {
-                first()
-                Spacer(Modifier.height(compactSpacing))
-                second()
+                if (compact != null) {
+                    compact()
+                } else {
+                    first()
+                    Spacer(Modifier.height(compactSpacing))
+                    second()
+                }
             }
         }
     }

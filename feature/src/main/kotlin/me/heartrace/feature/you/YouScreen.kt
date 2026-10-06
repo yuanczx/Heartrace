@@ -38,7 +38,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,9 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import me.heartrace.data.AppLanguage
 import me.heartrace.data.ThemeMode
 import me.heartrace.feature.shell.AppSettingsViewModel
@@ -66,8 +62,6 @@ import me.heartrace.ui.components.SectionLabel
 import me.heartrace.ui.components.SegmentedOption
 import me.heartrace.ui.components.SettingRow
 import me.heartrace.ui.components.SlidingSegmentedControl
-import me.heartrace.ui.components.copyImageUriToInternalStorage
-import me.heartrace.ui.components.deleteInternalAttachment
 import me.heartrace.uikit.R as FeatureR
 
 @Composable
@@ -143,16 +137,8 @@ private fun YouSettingsContent(
     settings: me.heartrace.feature.shell.AppSettingsUiState,
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     val displayedNickname = state.nickname.ifBlank {
         stringResource(FeatureR.string.profile_nickname_placeholder)
-    }
-    fun discardDraftAvatar() {
-        val current = viewModel.uiState
-        if (current.draftAvatarUri != current.avatarUri) {
-            deleteInternalAttachment(context, current.draftAvatarUri)
-        }
-        viewModel.closeProfileDialog()
     }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) settingsViewModel.setRemindersEnabled(true)
@@ -172,26 +158,7 @@ private fun YouSettingsContent(
         }
     }
     val avatarPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
-            viewModel.setCopyingAvatar(true)
-            coroutineScope.launch(Dispatchers.IO) {
-                val copiedUri = copyImageUriToInternalStorage(context, uri)
-                withContext(Dispatchers.Main) {
-                    if (copiedUri != null) {
-                        val current = viewModel.uiState
-                        if (!current.isProfileDialogVisible) {
-                            deleteInternalAttachment(context, copiedUri)
-                        } else {
-                            if (current.draftAvatarUri != current.avatarUri) {
-                                deleteInternalAttachment(context, current.draftAvatarUri)
-                            }
-                            viewModel.setDraftAvatarUri(copiedUri)
-                        }
-                    }
-                    viewModel.setCopyingAvatar(false)
-                }
-            }
-        }
+        uri?.let { viewModel.copyAvatar(it.toString()) }
     }
     Column {
         Row(
@@ -247,7 +214,7 @@ private fun YouSettingsContent(
     }
     if (state.isProfileDialogVisible) {
         AlertDialog(
-            onDismissRequest = ::discardDraftAvatar,
+            onDismissRequest = viewModel::closeProfileDialog,
             containerColor = PanelLight,
             title = { Text(stringResource(FeatureR.string.profile_title), color = Cream, fontWeight = FontWeight.SemiBold) },
             text = {
@@ -255,7 +222,7 @@ private fun YouSettingsContent(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ProfileAvatar(state.draftAvatarUri, Modifier.size(72.dp), stringResource(FeatureR.string.profile_avatar))
                         Spacer(Modifier.width(14.dp))
-                        TextButton(onClick = { avatarPickerLauncher.launch("image/*") }) {
+                        TextButton(onClick = { avatarPickerLauncher.launch("image/*") }, enabled = !state.isCopyingAvatar && !state.isSavingProfile) {
                             Icon(Icons.Outlined.Edit, contentDescription = null)
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(FeatureR.string.profile_change_avatar), color = Coral)
@@ -264,6 +231,7 @@ private fun YouSettingsContent(
                     Spacer(Modifier.height(18.dp))
                     OutlinedTextField(
                         value = state.draftNickname,
+                        enabled = !state.isSavingProfile,
                         onValueChange = viewModel::setDraftNickname,
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text(stringResource(FeatureR.string.profile_nickname)) },
@@ -281,14 +249,22 @@ private fun YouSettingsContent(
                             cursorColor = Coral,
                         ),
                     )
+                    state.profileErrorMessage?.let { error ->
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(if (error == "avatar_copy_failed") FeatureR.string.avatar_copy_failed else FeatureR.string.save_failed),
+                            color = Coral,
+                            fontSize = 12.sp,
+                        )
+                    }
                 }
             },
             confirmButton = {
-                TextButton(onClick = viewModel::saveProfile, enabled = !state.isCopyingAvatar) {
+                TextButton(onClick = viewModel::saveProfile, enabled = !state.isCopyingAvatar && !state.isSavingProfile) {
                     Text(stringResource(FeatureR.string.save), color = Coral, fontWeight = FontWeight.Bold)
                 }
             },
-            dismissButton = { TextButton(onClick = ::discardDraftAvatar) { Text(stringResource(FeatureR.string.cancel), color = Muted) } },
+            dismissButton = { TextButton(onClick = viewModel::closeProfileDialog, enabled = !state.isSavingProfile) { Text(stringResource(FeatureR.string.cancel), color = Muted) } },
         )
     }
 }

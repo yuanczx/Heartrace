@@ -2,14 +2,17 @@ package me.heartrace.feature.patterns
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -29,31 +32,36 @@ import me.heartrace.uikit.R
 @Composable
 fun PatternsScreen(viewModel: PatternsViewModel = hiltViewModel()) {
     val state = viewModel.uiState
-    Column {
+    Column(Modifier.fillMaxSize()) {
         Text(stringResource(R.string.insights_title), color = Cream, fontSize = 29.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(5.dp))
         Text(stringResource(R.string.insights_subtitle), color = Muted, fontSize = 14.sp)
         Spacer(Modifier.height(23.dp))
         AdaptiveTwoPane(
-            compactSpacing = 23.dp,
+            modifier = Modifier.weight(1f),
             first = {
-                InsightsOverviewPane(state)
+                LazyColumn(Modifier.fillMaxSize()) {
+                    item(key = "overview") { InsightsOverviewPane(state) }
+                }
             },
             second = {
-                HistoryPane(
-                    state = state,
-                    onPreviousDate = viewModel::showPreviousHistoryDate,
-                    onNextDate = viewModel::showNextHistoryDate,
-                    onDateSelected = viewModel::selectHistoryDate,
-                    onRangeSelected = viewModel::selectHistoryRange,
-                    onEditRecord = viewModel::startEditRecord,
-                )
+                LazyColumn(Modifier.fillMaxSize()) { historyItems(state, viewModel) }
+            },
+            compact = {
+                LazyColumn(Modifier.fillMaxSize()) {
+                    item(key = "overview") { InsightsOverviewPane(state) }
+                    item(key = "spacing") { Spacer(Modifier.height(23.dp)) }
+                    historyItems(state, viewModel)
+                }
             },
         )
     }
-    state.editingRecord?.let { record ->
+    state.editingDraft?.let { draft ->
+        val record = draft.record
         EditRecordSheet(
-            record = record,
+            draft = draft,
+            onDraftChange = { transform -> viewModel.updateEditDraft(record, transform) },
+            isSaving = state.isUpdatingRecord,
             onDismiss = viewModel::dismissEditRecord,
             onSave = { moodValue, energyLevel, momentText, recordedAt, imageUris, audioUri, audioDurationMs ->
                 viewModel.updateRecord(record.id, moodValue, energyLevel, momentText, recordedAt, imageUris, audioUri, audioDurationMs)
@@ -75,8 +83,18 @@ private fun InsightsOverviewPane(state: PatternsUiState) {
             } else {
                 Text(stringResource(R.string.insights_ready), color = Cream, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(10.dp))
-                Text(stringResource(R.string.average_energy, state.averageEnergy ?: 0f), color = Muted, fontSize = 13.sp)
-                Text(stringResource(R.string.average_mood, state.averageMood ?: 0), color = Muted, fontSize = 13.sp)
+                Text(
+                    state.averageEnergy?.let { stringResource(R.string.average_energy, it) }
+                        ?: stringResource(R.string.average_energy_not_recorded),
+                    color = Muted,
+                    fontSize = 13.sp,
+                )
+                Text(
+                    state.averageMood?.let { stringResource(R.string.average_mood, it) }
+                        ?: stringResource(R.string.average_mood_no_data),
+                    color = Muted,
+                    fontSize = 13.sp,
+                )
                 Text(stringResource(R.string.insights_record_count, state.recordCount), color = Muted, fontSize = 13.sp)
                 Text(stringResource(R.string.insights_active_days, state.activeDays), color = Muted, fontSize = 13.sp)
             }
@@ -124,34 +142,28 @@ private fun WeeklyGoalCard(progress: WeeklyGoalProgress) {
     }
 }
 
-@Composable
-private fun HistoryPane(
-    state: PatternsUiState,
-    onPreviousDate: () -> Unit,
-    onNextDate: () -> Unit,
-    onDateSelected: (Long) -> Unit,
-    onRangeSelected: (HistoryRange) -> Unit,
-    onEditRecord: (me.heartrace.data.MoodRecord) -> Unit,
-) {
-    SectionLabel(stringResource(R.string.history))
-    Spacer(Modifier.height(9.dp))
-    HistoryDatePager(
-        dateStart = state.selectedDateStart.takeIf { it > 0L } ?: System.currentTimeMillis(),
-        range = state.historyRange,
-        canGoToNextDate = state.canGoToNextDate,
-        onPreviousDate = onPreviousDate,
-        onNextDate = onNextDate,
-        onDateSelected = onDateSelected,
-        onRangeSelected = onRangeSelected,
-    )
-    Spacer(Modifier.height(9.dp))
+private fun LazyListScope.historyItems(state: PatternsUiState, viewModel: PatternsViewModel) {
+    item(key = "history_header") {
+        SectionLabel(stringResource(R.string.history))
+        Spacer(Modifier.height(9.dp))
+        HistoryDatePager(
+            dateStart = state.selectedDateStart.takeIf { it > 0L } ?: System.currentTimeMillis(),
+            range = state.historyRange,
+            canGoToNextDate = state.canGoToNextDate,
+            onPreviousDate = viewModel::showPreviousHistoryDate,
+            onNextDate = viewModel::showNextHistoryDate,
+            onDateSelected = viewModel::selectHistoryDate,
+            onRangeSelected = viewModel::selectHistoryRange,
+        )
+        Spacer(Modifier.height(9.dp))
+    }
     if (state.records.isEmpty()) {
-        Text(stringResource(R.string.no_history_for_date), color = Muted, fontSize = 13.sp)
+        item(key = "empty_history") {
+            Text(stringResource(R.string.no_history_for_date), color = Muted, fontSize = 13.sp)
+        }
     } else {
-        state.records.forEach { record ->
-            key(record.id) {
-                MoodRecordRow(record = record, showDate = true, onLongClick = { onEditRecord(record) })
-            }
+        items(state.records, key = { it.id }, contentType = { "record" }) { record ->
+            MoodRecordRow(record = record, showDate = true, onLongClick = { viewModel.startEditRecord(record) })
         }
     }
 }

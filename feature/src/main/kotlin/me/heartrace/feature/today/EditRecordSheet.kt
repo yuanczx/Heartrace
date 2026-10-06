@@ -27,6 +27,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,10 +41,10 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +55,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.heartrace.data.MoodRecord
 import me.heartrace.data.toMood
 import me.heartrace.data.toMoodValue
 import me.heartrace.ui.components.AttachmentSelectorBar
@@ -65,7 +65,6 @@ import me.heartrace.ui.components.Muted
 import me.heartrace.ui.components.Panel
 import me.heartrace.ui.components.PanelLight
 import me.heartrace.ui.components.SectionLabel
-import me.heartrace.ui.components.deleteInternalAttachment
 import me.heartrace.uikit.R
 import java.util.Calendar
 import java.util.Date
@@ -73,7 +72,9 @@ import java.util.Date
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditRecordSheet(
-    record: MoodRecord,
+    draft: EditRecordDraft,
+    onDraftChange: ((EditRecordDraft) -> EditRecordDraft) -> Unit,
+    isSaving: Boolean,
     onDismiss: () -> Unit,
     onSave: (
         moodValue: Int,
@@ -87,25 +88,21 @@ fun EditRecordSheet(
     onDelete: () -> Unit,
     errorMessage: String? = null,
 ) {
-    var moodValue by remember(record) { mutableIntStateOf(record.moodValue) }
-    var energyLevel by remember(record) { mutableStateOf(record.energyLevel) }
-    var momentText by remember(record) { mutableStateOf(record.momentText ?: "") }
-    var recordedAt by remember(record) { mutableLongStateOf(record.recordedAt) }
-    var imageUris by remember(record) { mutableStateOf(record.imageUris) }
-    var audioUri by remember(record) { mutableStateOf(record.audioUri) }
-    var audioDurationMs by remember(record) { mutableLongStateOf(record.audioDurationMs) }
-    val originalImageUris = remember(record) { record.imageUris.toSet() }
-    val originalAudioUri = remember(record) { record.audioUri }
-
+    val record = draft.record
+    val moodValue = draft.moodValue
+    val energyLevel = draft.energyLevel
+    val momentText = draft.momentText
+    val recordedAt = draft.recordedAt
+    val imageUris = draft.imageUris
+    val audioUri = draft.audioUri
+    val audioDurationMs = draft.audioDurationMs
     val context = LocalContext.current
     val localeTag = LocalConfiguration.current.locales.toLanguageTags()
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showTimePicker by remember { mutableStateOf(false) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
-    fun discardDraftAttachments() {
-        imageUris.filterNot(originalImageUris::contains).forEach { deleteInternalAttachment(context, it) }
-        if (audioUri != originalAudioUri) deleteInternalAttachment(context, audioUri)
-    }
+    var showDatePicker by rememberSaveable(record.id) { mutableStateOf(false) }
+    var showTimePicker by rememberSaveable(record.id) { mutableStateOf(false) }
+    var showDeleteConfirmation by rememberSaveable(record.id) { mutableStateOf(false) }
+    var areAttachmentsBusy by remember(record.id) { mutableStateOf(false) }
+    val currentIsSaving by rememberUpdatedState(isSaving)
 
     if (showDatePicker) {
         key(localeTag) {
@@ -125,7 +122,7 @@ fun EditRecordSheet(
                     TextButton(
                         onClick = {
                             datePickerState.selectedDateMillis?.let { selectedDateMillis ->
-                                recordedAt = recordedAt.withLocalDateFromUtc(selectedDateMillis)
+                                onDraftChange { it.copy(recordedAt = it.recordedAt.withLocalDateFromUtc(selectedDateMillis)) }
                             }
                             showDatePicker = false
                         },
@@ -187,7 +184,7 @@ fun EditRecordSheet(
                                 set(Calendar.SECOND, 0)
                                 set(Calendar.MILLISECOND, 0)
                             }
-                            recordedAt = updated.timeInMillis
+                            onDraftChange { it.copy(recordedAt = updated.timeInMillis) }
                             showTimePicker = false
                         },
                     ) {
@@ -218,7 +215,6 @@ fun EditRecordSheet(
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteConfirmation = false
-                    discardDraftAttachments()
                     onDelete()
                 }) { Text(stringResource(R.string.delete_record), color = Coral, fontWeight = FontWeight.Bold) }
             },
@@ -234,11 +230,8 @@ fun EditRecordSheet(
     val timeLabel = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT, locale).format(recordedDate)
 
     ModalBottomSheet(
-        onDismissRequest = {
-            discardDraftAttachments()
-            onDismiss()
-        },
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        onDismissRequest = { if (!isSaving) onDismiss() },
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true, confirmValueChange = { !currentIsSaving || it != SheetValue.Hidden }),
         containerColor = Panel,
         contentWindowInsets = { WindowInsets(0.dp) },
     ) {
@@ -259,7 +252,7 @@ fun EditRecordSheet(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
-                        TextButton(onClick = { showDeleteConfirmation = true }) {
+                        TextButton(onClick = { showDeleteConfirmation = true }, enabled = !isSaving) {
                             Icon(
                                 Icons.Outlined.Delete,
                                 contentDescription = null,
@@ -279,7 +272,7 @@ fun EditRecordSheet(
                     SectionLabel(stringResource(R.string.recorded_at))
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { showDatePicker = true }) {
+                        TextButton(onClick = { showDatePicker = true }, enabled = !isSaving) {
                             Icon(
                                 imageVector = Icons.Outlined.CalendarToday,
                                 contentDescription = null,
@@ -294,7 +287,7 @@ fun EditRecordSheet(
                             )
                         }
                         Text("·", color = Muted, fontSize = 13.sp)
-                        TextButton(onClick = { showTimePicker = true }) {
+                        TextButton(onClick = { showTimePicker = true }, enabled = !isSaving) {
                             Icon(
                                 imageVector = Icons.Outlined.Schedule,
                                 contentDescription = null,
@@ -319,7 +312,7 @@ fun EditRecordSheet(
                     ) {
                         MoodStrip(
                             selected = moodValue.toMood(),
-                            onSelect = { moodValue = it.toMoodValue() },
+                            onSelect = if (isSaving) null else { mood -> onDraftChange { it.copy(moodValue = mood.toMoodValue()) } },
                         )
                     }
                     Spacer(Modifier.height(14.dp))
@@ -332,14 +325,16 @@ fun EditRecordSheet(
                             EnergyChoiceOption(3, stringResource(R.string.energy_high)),
                         ),
                         selectedLevel = energyLevel ?: 0,
-                        onSelect = { energyLevel = it },
+                        onSelect = { level -> onDraftChange { it.copy(energyLevel = level) } },
+                        enabled = !isSaving,
                     )
                     Spacer(Modifier.height(14.dp))
                     SectionLabel(stringResource(R.string.daily_note))
                     Spacer(Modifier.height(6.dp))
                     TextField(
                         value = momentText,
-                        onValueChange = { momentText = it },
+                        onValueChange = { text -> onDraftChange { it.copy(momentText = text) } },
+                        enabled = !isSaving,
                         placeholder = { Text(stringResource(R.string.note_placeholder), color = Muted) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 2,
@@ -353,25 +348,19 @@ fun EditRecordSheet(
                         ),
                     )
                     Spacer(Modifier.height(12.dp))
-                    AttachmentSelectorBar(
-                        imageUris = imageUris,
-                        onAddImages = { imageUris = imageUris + it },
-                        onRemoveImage = { uri ->
-                            if (uri !in originalImageUris) deleteInternalAttachment(context, uri)
-                            imageUris = imageUris.filter { it != uri }
-                        },
-                        audioUri = audioUri,
-                        audioDurationMs = audioDurationMs,
-                        onAudioRecorded = { uri, duration ->
-                            audioUri = uri
-                            audioDurationMs = duration
-                        },
-                        onRemoveAudio = {
-                            if (audioUri != originalAudioUri) deleteInternalAttachment(context, audioUri)
-                            audioUri = null
-                            audioDurationMs = 0L
-                        },
-                    )
+                    key(record.id) {
+                        AttachmentSelectorBar(
+                            imageUris = imageUris,
+                            onAddImages = { uris -> onDraftChange { it.copy(imageUris = it.imageUris + uris) } },
+                            onRemoveImage = { uri -> onDraftChange { it.copy(imageUris = it.imageUris - uri) } },
+                            audioUri = audioUri,
+                            audioDurationMs = audioDurationMs,
+                            onAudioRecorded = { uri, duration -> onDraftChange { it.copy(audioUri = uri, audioDurationMs = duration) } },
+                            onRemoveAudio = { onDraftChange { it.copy(audioUri = null, audioDurationMs = 0L) } },
+                            enabled = !isSaving,
+                            onBusyChanged = { areAttachmentsBusy = it },
+                        )
+                    }
                     errorMessage?.let {
                         Spacer(Modifier.height(8.dp))
                         Text(stringResource(R.string.save_failed), color = Coral, fontSize = 12.sp)
@@ -382,14 +371,12 @@ fun EditRecordSheet(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TextButton(onClick = {
-                            discardDraftAttachments()
-                            onDismiss()
-                        }) {
+                        TextButton(onClick = onDismiss, enabled = !isSaving) {
                             Text(stringResource(R.string.cancel), color = Muted)
                         }
                         Spacer(Modifier.width(8.dp))
                         Button(
+                            enabled = !isSaving && !areAttachmentsBusy,
                             onClick = {
                                 onSave(
                                     moodValue,

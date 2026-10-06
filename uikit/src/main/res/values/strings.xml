@@ -184,4 +184,8 @@
     <string name="history_range_day">Day</string>
     <string name="history_range_month">Month</string>
     <string name="history_range_year">Year</string>
+    <string name="avatar_copy_failed">Could not import this image. Please try another image.</string>
+    <string name="average_energy_not_recorded">Average energy: not recorded</string>
+    <string name="average_mood_no_data">Average mood: no records in this period</string>
+    <string name="close_image_preview">Close image preview</string>
 </resources>

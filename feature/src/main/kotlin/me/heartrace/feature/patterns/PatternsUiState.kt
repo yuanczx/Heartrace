@@ -3,6 +3,7 @@ package me.heartrace.feature.patterns
 import me.heartrace.data.DailyNote
 import me.heartrace.data.MoodRecord
 import me.heartrace.feature.metrics.WeeklyGoalProgress
+import me.heartrace.feature.today.EditRecordDraft
 
 data class DailyRecordSummary(
     val dayStart: Long,
@@ -32,5 +33,7 @@ data class PatternsUiState(
     val historyRange: HistoryRange = HistoryRange.DAY,
     val canGoToNextDate: Boolean = false,
     val editingRecord: MoodRecord? = null,
+    val editingDraft: EditRecordDraft? = null,
+    val isUpdatingRecord: Boolean = false,
     val errorMessage: String? = null,
 )

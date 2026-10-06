@@ -145,10 +145,10 @@ internal fun HeartraceRoot(settingsViewModel: AppSettingsViewModel) {
                         Modifier
                             .fillMaxSize()
                             .then(
-                                if (isYouPage) {
-                                    Modifier
-                                } else {
+                                if (page == tabs.indexOf(HeartraceDestination.Today)) {
                                     Modifier.verticalScroll(rememberScrollState())
+                                } else {
+                                    Modifier
                                 },
                             ),
                     ) {

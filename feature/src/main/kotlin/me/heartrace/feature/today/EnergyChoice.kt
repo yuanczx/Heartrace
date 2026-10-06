@@ -51,6 +51,7 @@ fun EnergyChoices(
     selectedLevel: Int?,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val colors = HeartraceTheme.colors
     val selectedIndex = options.indexOfFirst { it.level == selectedLevel }
@@ -107,6 +108,7 @@ fun EnergyChoices(
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(8.dp))
                             .clickable(
+                                enabled = enabled,
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                             ) { onSelect(option.level) },

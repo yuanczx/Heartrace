@@ -39,11 +39,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import me.heartrace.uikit.R
 import kotlin.time.Duration.Companion.seconds
 
@@ -57,24 +55,35 @@ fun AttachmentSelectorBar(
     onAudioRecorded: (String, Long) -> Unit,
     onRemoveAudio: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onBusyChanged: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var isRecording by remember { mutableStateOf(false) }
+    var isImporting by remember { mutableStateOf(false) }
+    var isStopping by remember { mutableStateOf(false) }
+    var isAwaitingPermission by remember { mutableStateOf(false) }
+    val currentEnabled by rememberUpdatedState(enabled)
+    val currentOnBusyChanged by rememberUpdatedState(onBusyChanged)
     var recordingDurationSeconds by remember { mutableLongStateOf(0L) }
     val recorderManager = remember { VoiceRecorderManager(context) }
     val currentOnAddImages by rememberUpdatedState(onAddImages)
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),
     ) { uris: List<Uri> ->
-        coroutineScope.launch(Dispatchers.IO) {
-            val copiedPaths = uris.mapNotNull { copyImageUriToInternalStorage(context, it) }
-            if (copiedPaths.isNotEmpty()) {
-                if (isActive) {
-                    withContext(Dispatchers.Main.immediate) { currentOnAddImages(copiedPaths) }
-                } else {
-                    copiedPaths.forEach { deleteInternalAttachment(context, it) }
+        coroutineScope.launch {
+            val copiedPaths = mutableListOf<String>()
+            var delivered = false
+            try {
+                uris.forEach { uri -> copyImageToInternalStorage(context, uri)?.let(copiedPaths::add) }
+                if (isActive && currentEnabled) {
+                    if (copiedPaths.isNotEmpty()) currentOnAddImages(copiedPaths)
+                    delivered = true
                 }
+            } finally {
+                if (!delivered) copiedPaths.forEach { deleteInternalAttachment(context, it) }
+                isImporting = false
             }
         }
     }
@@ -83,13 +92,15 @@ fun AttachmentSelectorBar(
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { isGranted ->
-        if (isGranted) {
+        isAwaitingPermission = false
+        if (isGranted && currentEnabled) {
             val file = recorderManager.startRecording()
             if (file != null) {
                 isRecording = true
+                currentOnBusyChanged(true)
                 recordingDurationSeconds = 0L
             }
-        } else {
+        } else if (!isGranted) {
             Toast.makeText(context, audioPermissionDeniedText, Toast.LENGTH_SHORT).show()
         }
     }
@@ -99,16 +110,23 @@ fun AttachmentSelectorBar(
             recordingDurationSeconds += 1
         }
     }
-    DisposableEffect(recorderManager) {
-        onDispose { recorderManager.cancelRecording() }
+    LaunchedEffect(isRecording, isImporting, isStopping, isAwaitingPermission) {
+        currentOnBusyChanged(isRecording || isImporting || isStopping || isAwaitingPermission)
     }
+    DisposableEffect(recorderManager) {
+        onDispose {
+            recorderManager.cancelRecording()
+            currentOnBusyChanged(false)
+        }
+    }
+    val controlsEnabled = enabled && !isImporting && !isStopping && !isAwaitingPermission
     Column(modifier = modifier.fillMaxWidth()) {
         if (imageUris.isNotEmpty()) {
-            ImageAttachmentsView(imageUris = imageUris, onRemoveImage = onRemoveImage)
+            ImageAttachmentsView(imageUris = imageUris, onRemoveImage = if (controlsEnabled) onRemoveImage else null)
             Spacer(Modifier.height(8.dp))
         }
         if (!audioUri.isNullOrBlank()) {
-            VoicePlayerView(audioUri = audioUri, durationMs = audioDurationMs, onDelete = onRemoveAudio)
+            VoicePlayerView(audioUri = audioUri, durationMs = audioDurationMs, onDelete = if (controlsEnabled) onRemoveAudio else null)
             Spacer(Modifier.height(8.dp))
         }
         if (isRecording) {
@@ -119,15 +137,21 @@ fun AttachmentSelectorBar(
                     isRecording = false
                 },
                 onStop = {
+                    isStopping = true
                     isRecording = false
                     coroutineScope.launch {
-                        val result = recorderManager.stopRecording()
-                        if (result != null) {
-                            if (isActive) {
+                        var recordedUri: String? = null
+                        var delivered = false
+                        try {
+                            val result = recorderManager.stopRecording()
+                            recordedUri = result?.first
+                            if (result != null && isActive && currentEnabled) {
                                 currentOnAudioRecorded(result.first, result.second)
-                            } else {
-                                deleteInternalAttachment(context, result.first)
+                                delivered = true
                             }
+                        } finally {
+                            if (!delivered) deleteInternalAttachment(context, recordedUri)
+                            isStopping = false
                         }
                     }
                 },
@@ -135,7 +159,12 @@ fun AttachmentSelectorBar(
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(
-                    onClick = { imagePickerLauncher.launch("image/*") },
+                    onClick = {
+                        isImporting = true
+                        currentOnBusyChanged(true)
+                        imagePickerLauncher.launch("image/*")
+                    },
+                    enabled = controlsEnabled,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Cream),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.height(36.dp),
@@ -146,6 +175,7 @@ fun AttachmentSelectorBar(
                 }
                 if (audioUri.isNullOrBlank()) {
                     OutlinedButton(
+                        enabled = controlsEnabled,
                         onClick = {
                             val hasPermission = ContextCompat.checkSelfPermission(
                                 context,
@@ -155,9 +185,12 @@ fun AttachmentSelectorBar(
                                 val file = recorderManager.startRecording()
                                 if (file != null) {
                                     isRecording = true
+                                    currentOnBusyChanged(true)
                                     recordingDurationSeconds = 0L
                                 }
                             } else {
+                                isAwaitingPermission = true
+                                currentOnBusyChanged(true)
                                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                             }
                         },

@@ -2,11 +2,17 @@ package me.heartrace
 
 import androidx.activity.OnBackPressedCallback
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTouchInput
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -81,6 +87,28 @@ class MainNavigationTest {
         } finally {
             composeRule.runOnUiThread { fallbackBackCallback.remove() }
         }
+    }
+
+    @Test
+    fun unsaved_record_editor_survives_activity_recreation() {
+        val activity = composeRule.activity
+        val savedText = "Saved note ${System.nanoTime()}"
+        val draftText = "Unsaved changes"
+        waitForScreen(activity.getString(UIKitR.string.today_check_in_title))
+        composeRule.onNodeWithText(activity.getString(UIKitR.string.add_details)).performClick()
+        composeRule.onNode(hasSetTextAction()).performTextReplacement(savedText)
+        composeRule.onNodeWithText(activity.getString(UIKitR.string.save_check_in)).performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithText("\"$savedText\"").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("\"$savedText\"").performScrollTo().performTouchInput { longClick() }
+        waitForScreen(activity.getString(UIKitR.string.edit_record))
+        composeRule.onNode(hasSetTextAction()).performTextReplacement(draftText)
+
+        composeRule.activityRule.scenario.recreate()
+
+        waitForScreen(composeRule.activity.getString(UIKitR.string.edit_record))
+        composeRule.onNodeWithText(draftText).assertIsDisplayed()
     }
 
     private fun waitForScreen(text: String) {

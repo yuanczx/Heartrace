@@ -5,6 +5,7 @@ import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -24,6 +25,7 @@ class VoiceRecorderManager(private val context: Context) {
             @Suppress("DEPRECATION")
             MediaRecorder()
         }
+        mediaRecorder = recorder
         recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
         recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
@@ -32,7 +34,6 @@ class VoiceRecorderManager(private val context: Context) {
         recorder.setOutputFile(file.absolutePath)
         recorder.prepare()
         recorder.start()
-        mediaRecorder = recorder
         file
     } catch (e: Exception) {
         cancelRecording()
@@ -41,29 +42,32 @@ class VoiceRecorderManager(private val context: Context) {
 
     suspend fun stopRecording(): Pair<String, Long>? {
         val recorder = mediaRecorder ?: return null
+        val file = currentOutputFile
         return try {
             recorder.stop()
             recorder.release()
             mediaRecorder = null
-            val file = currentOutputFile
             currentOutputFile = null
             if (file != null && file.exists() && file.length() > 0) {
                 val duration = withContext(Dispatchers.IO) {
                     val mp = MediaPlayer.create(context, Uri.fromFile(file))
-                    val value = mp?.duration?.toLong() ?: 0L
-                    mp?.release()
-                    value
+                    try {
+                        mp?.duration?.toLong() ?: 0L
+                    } finally {
+                        mp?.release()
+                    }
                 }
                 Pair(Uri.fromFile(file).toString(), duration)
             } else {
+                file?.delete()
                 null
             }
         } catch (e: Exception) {
-            e.printStackTrace()
             runCatching { recorder.release() }
             mediaRecorder = null
-            currentOutputFile?.delete()
+            file?.delete()
             currentOutputFile = null
+            if (e is CancellationException) throw e
             null
         }
     }

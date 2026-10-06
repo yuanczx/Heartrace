@@ -11,6 +11,8 @@ data class YouUiState(
     val draftNickname: String = "",
     val draftAvatarUri: String? = null,
     val isCopyingAvatar: Boolean = false,
+    val isSavingProfile: Boolean = false,
+    val profileErrorMessage: String? = null,
     val badges: List<BadgeStatus> = emptyList(),
     val badgeCelebration: List<BadgeKind> = emptyList(),
     val isAchievementsVisible: Boolean = false,

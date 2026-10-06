@@ -22,11 +22,11 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,14 +43,12 @@ import me.heartrace.ui.components.Muted
 import me.heartrace.ui.components.Panel
 import me.heartrace.ui.components.PanelLight
 import me.heartrace.ui.components.SectionLabel
-import me.heartrace.ui.components.deleteInternalAttachment
 import me.heartrace.uikit.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(viewModel: TodayViewModel = hiltViewModel()) {
     val state = viewModel.uiState
-    val context = LocalContext.current
     Column {
         Text(stringResource(R.string.today_check_in_title), color = Cream, fontSize = 29.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(5.dp))
@@ -76,20 +74,11 @@ fun TodayScreen(viewModel: TodayViewModel = hiltViewModel()) {
                     onDetailTextChange = viewModel::setMomentDraft,
                     detailImageUris = state.imageUris,
                     onAddImages = viewModel::addImages,
-                    onRemoveImage = { uri ->
-                        deleteInternalAttachment(context, uri)
-                        viewModel.removeImage(uri)
-                    },
+                    onRemoveImage = viewModel::removeImage,
                     detailAudioUri = state.audioUri,
                     detailAudioDurationMs = state.audioDurationMs,
-                    onAudioRecorded = { uri, duration ->
-                        deleteInternalAttachment(context, state.audioUri)
-                        viewModel.setAudio(uri, duration)
-                    },
-                    onRemoveAudio = {
-                        deleteInternalAttachment(context, state.audioUri)
-                        viewModel.setAudio(null)
-                    },
+                    onAudioRecorded = viewModel::setAudio,
+                    onRemoveAudio = { viewModel.setAudio(null) },
                     onDetailsExpanded = viewModel::setDetailsExpanded,
                 )
             },
@@ -102,9 +91,13 @@ fun TodayScreen(viewModel: TodayViewModel = hiltViewModel()) {
         )
     }
 
-    state.editingRecord?.let { record ->
+    state.editingDraft?.let { draft ->
+        val record = draft.record
         EditRecordSheet(
-            record = record,
+            draft = draft,
+            onDraftChange = { transform -> viewModel.updateEditDraft(record, transform) },
+            isSaving = state.isUpdatingRecord,
+            errorMessage = state.recordErrorMessage,
             onDismiss = viewModel::dismissEditRecord,
             onSave = { moodValue, energyLevel, momentText, recordedAt, imageUris, audioUri, audioDurationMs ->
                 viewModel.updateRecord(
@@ -142,13 +135,14 @@ private fun TodayCheckInPane(
     onRemoveAudio: () -> Unit,
     onDetailsExpanded: (Boolean) -> Unit,
 ) {
+    var areAttachmentsBusy by remember { mutableStateOf(false) }
     SectionLabel(stringResource(R.string.arriving))
     Spacer(Modifier.height(6.dp))
     Surface(color = Panel, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
-        MoodStrip(selected = state.selectedMood, onSelect = onMoodSelected)
+        MoodStrip(selected = state.selectedMood, onSelect = if (state.isSaving) null else onMoodSelected)
     }
     Spacer(Modifier.height(10.dp))
-    TextButton(onClick = { onDetailsExpanded(!state.isDetailsExpanded) }) {
+    TextButton(onClick = { onDetailsExpanded(!state.isDetailsExpanded) }, enabled = !state.isSaving && !areAttachmentsBusy) {
         Text(
             if (state.isDetailsExpanded) stringResource(R.string.hide_details) else stringResource(R.string.add_details),
             color = Coral,
@@ -158,6 +152,7 @@ private fun TodayCheckInPane(
     if (state.isDetailsExpanded) {
         TextField(
             value = detailText,
+            enabled = !state.isSaving,
             onValueChange = onDetailTextChange,
             placeholder = { Text(stringResource(R.string.moment_placeholder), color = Muted) },
             modifier = Modifier.fillMaxWidth(),
@@ -181,6 +176,7 @@ private fun TodayCheckInPane(
             ),
             selectedLevel = state.energyLevel,
             onSelect = onEnergyLevelChange,
+            enabled = !state.isSaving,
         )
         Spacer(Modifier.height(8.dp))
         AttachmentSelectorBar(
@@ -191,10 +187,12 @@ private fun TodayCheckInPane(
             audioDurationMs = detailAudioDurationMs,
             onAudioRecorded = onAudioRecorded,
             onRemoveAudio = onRemoveAudio,
+            enabled = !state.isSaving,
+            onBusyChanged = { areAttachmentsBusy = it },
         )
     }
     Spacer(Modifier.height(10.dp))
-    Button(onClick = onSave, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(11.dp), colors = ButtonDefaults.buttonColors(containerColor = Coral, contentColor = Ink)) {
+    Button(onClick = onSave, enabled = !state.isSaving && !areAttachmentsBusy, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(11.dp), colors = ButtonDefaults.buttonColors(containerColor = Coral, contentColor = Ink)) {
         Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
         Text(stringResource(R.string.save_check_in), fontWeight = FontWeight.Bold)

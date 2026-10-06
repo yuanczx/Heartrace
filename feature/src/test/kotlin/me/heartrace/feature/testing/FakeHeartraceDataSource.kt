@@ -1,5 +1,6 @@
 package me.heartrace.feature.testing
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import me.heartrace.data.AppLanguage
@@ -22,8 +23,18 @@ class FakeHeartraceDataSource : HeartraceDataSource {
     var saveMomentError: Throwable? = null
     var updateCheckInError: Throwable? = null
     var deleteCheckInError: Throwable? = null
+    var saveCheckInGate: CompletableDeferred<Unit>? = null
+    var updateCheckInGate: CompletableDeferred<Unit>? = null
+    var setProfileGate: CompletableDeferred<Unit>? = null
+    var resetCount = 0
 
-    data class CheckInCall(val moodValue: Int, val energyLevel: Int?, val momentText: String? = null)
+    data class CheckInCall(
+        val moodValue: Int,
+        val energyLevel: Int?,
+        val momentText: String? = null,
+        val imageUris: List<String> = emptyList(),
+        val audioUri: String? = null,
+    )
 
     data class MomentCall(
         val id: Long,
@@ -39,6 +50,8 @@ class FakeHeartraceDataSource : HeartraceDataSource {
         val energyLevel: Int?,
         val momentText: String?,
         val recordedAt: Long,
+        val imageUris: List<String> = emptyList(),
+        val audioUri: String? = null,
     )
 
     override fun observePreferences(): Flow<PreferencesSnapshot> = preferences
@@ -58,8 +71,9 @@ class FakeHeartraceDataSource : HeartraceDataSource {
         audioUri: String?,
         audioDurationMs: Long,
     ): Long {
+        saveCheckInGate?.await()
         saveCheckInError?.let { throw it }
-        savedCheckIns += CheckInCall(moodValue, energyLevel, momentText)
+        savedCheckIns += CheckInCall(moodValue, energyLevel, momentText, imageUris, audioUri)
         return nextId++
     }
 
@@ -85,8 +99,9 @@ class FakeHeartraceDataSource : HeartraceDataSource {
         audioUri: String?,
         audioDurationMs: Long,
     ) {
+        updateCheckInGate?.await()
         updateCheckInError?.let { throw it }
-        updatedRecords += UpdateCall(id, moodValue, energyLevel, momentText, recordedAt)
+        updatedRecords += UpdateCall(id, moodValue, energyLevel, momentText, recordedAt, imageUris, audioUri)
     }
 
     override suspend fun deleteCheckIn(id: Long) {
@@ -112,8 +127,11 @@ class FakeHeartraceDataSource : HeartraceDataSource {
     }
 
     override suspend fun setProfile(nickname: String, avatarUri: String?) {
+        setProfileGate?.await()
         preferences.value = preferences.value.copy(nickname = nickname, avatarUri = avatarUri)
     }
 
-    override suspend fun resetToday() = Unit
+    override suspend fun resetToday() {
+        resetCount++
+    }
 }

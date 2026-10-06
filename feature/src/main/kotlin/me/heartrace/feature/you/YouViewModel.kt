@@ -6,8 +6,14 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.heartrace.data.HeartraceDataSource
+import me.heartrace.feature.attachments.DraftAttachmentStorage
 import me.heartrace.feature.metrics.BadgeKind
 import me.heartrace.feature.metrics.calculateBadges
 import javax.inject.Inject
@@ -17,9 +23,15 @@ class YouViewModel
 @Inject
 constructor(
     private val repository: HeartraceDataSource,
+    private val attachments: DraftAttachmentStorage,
 ) : ViewModel() {
     var uiState by mutableStateOf(YouUiState())
         private set
+
+    private var hasBeenCleared = false
+
+    private var avatarCopyJob: Job? = null
+    private var avatarCopyGeneration = 0
 
     private var hasObservedInitialBadges = false
     private var previouslyEarnedBadges: Set<BadgeKind> = emptySet()
@@ -67,35 +79,95 @@ constructor(
     }
 
     fun openProfileDialog() {
+        if (uiState.isProfileDialogVisible || uiState.isSavingProfile) return
         uiState = uiState.copy(
             isProfileDialogVisible = true,
             draftNickname = uiState.nickname,
             draftAvatarUri = uiState.avatarUri,
+            profileErrorMessage = null,
         )
     }
 
     fun closeProfileDialog() {
-        uiState = uiState.copy(isProfileDialogVisible = false)
+        if (uiState.isSavingProfile) return
+        avatarCopyGeneration++
+        avatarCopyJob?.cancel()
+        discardDraftAvatar()
+        uiState = uiState.copy(isProfileDialogVisible = false, isCopyingAvatar = false, draftAvatarUri = uiState.avatarUri)
     }
 
     fun setDraftNickname(nickname: String) {
-        uiState = uiState.copy(draftNickname = nickname.take(30))
+        if (!uiState.isSavingProfile) uiState = uiState.copy(draftNickname = nickname.take(30))
     }
 
     fun setDraftAvatarUri(uri: String?) {
+        if (uiState.isSavingProfile) {
+            if (uri != uiState.draftAvatarUri && uri != uiState.avatarUri) attachments.delete(uri)
+            return
+        }
+        if (uri != uiState.draftAvatarUri) discardDraftAvatar()
         uiState = uiState.copy(draftAvatarUri = uri)
     }
 
-    fun setCopyingAvatar(copying: Boolean) {
-        uiState = uiState.copy(isCopyingAvatar = copying)
+    fun copyAvatar(uri: String) {
+        if (!uiState.isProfileDialogVisible || uiState.isSavingProfile) return
+        val generation = ++avatarCopyGeneration
+        avatarCopyJob?.cancel()
+        uiState = uiState.copy(isCopyingAvatar = true, profileErrorMessage = null)
+        avatarCopyJob = viewModelScope.launch {
+            try {
+                val copiedUri = attachments.copyImage(uri)
+                if (generation != avatarCopyGeneration || !uiState.isProfileDialogVisible) {
+                    attachments.delete(copiedUri)
+                } else if (copiedUri == null) {
+                    uiState = uiState.copy(profileErrorMessage = "avatar_copy_failed")
+                } else {
+                    setDraftAvatarUri(copiedUri)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (generation == avatarCopyGeneration) uiState = uiState.copy(profileErrorMessage = "avatar_copy_failed")
+            } finally {
+                if (generation == avatarCopyGeneration) uiState = uiState.copy(isCopyingAvatar = false)
+            }
+        }
+    }
+
+    private fun discardDraftAvatar() {
+        if (uiState.draftAvatarUri != uiState.avatarUri) attachments.delete(uiState.draftAvatarUri)
     }
 
     fun saveProfile() {
+        if (!uiState.isProfileDialogVisible || uiState.isCopyingAvatar || uiState.isSavingProfile) return
         val current = uiState
-        viewModelScope.launch {
-            repository.setProfile(current.draftNickname, current.draftAvatarUri)
-            uiState = uiState.copy(isProfileDialogVisible = false)
+        uiState = current.copy(isSavingProfile = true, profileErrorMessage = null)
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            withContext(NonCancellable) {
+                try {
+                    repository.setProfile(current.draftNickname, current.draftAvatarUri)
+                    uiState = uiState.copy(
+                        isProfileDialogVisible = false,
+                        isSavingProfile = false,
+                        nickname = current.draftNickname.trim(),
+                        avatarUri = current.draftAvatarUri,
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (hasBeenCleared) discardDraftAvatar()
+                    uiState = uiState.copy(isSavingProfile = false, profileErrorMessage = "save_failed")
+                }
+            }
         }
+    }
+
+    override fun onCleared() {
+        hasBeenCleared = true
+        avatarCopyGeneration++
+        avatarCopyJob?.cancel()
+        if (!uiState.isSavingProfile) discardDraftAvatar()
+        super.onCleared()
     }
 
     fun openResetDialog() {

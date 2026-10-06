@@ -14,6 +14,8 @@ data class TodayUiState(
     val isUpdatingRecord: Boolean = false,
     val errorMessage: String? = null,
     val editingRecord: MoodRecord? = null,
+    val editingDraft: EditRecordDraft? = null,
+    val recordErrorMessage: String? = null,
     val isDetailsExpanded: Boolean = false,
     val momentDraft: String = "",
     val imageUris: List<String> = emptyList(),

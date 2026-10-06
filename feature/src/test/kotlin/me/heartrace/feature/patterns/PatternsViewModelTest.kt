@@ -7,6 +7,7 @@ import me.heartrace.data.DailyNote
 import me.heartrace.data.InsightsDataSnapshot
 import me.heartrace.data.Mood
 import me.heartrace.data.MoodRecord
+import me.heartrace.feature.testing.FakeDraftAttachmentStorage
 import me.heartrace.feature.testing.FakeHeartraceDataSource
 import me.heartrace.feature.testing.MainDispatcherRule
 import org.junit.Assert.assertEquals
@@ -36,7 +37,7 @@ class PatternsViewModelTest {
                 ),
             )
         }
-        val viewModel = PatternsViewModel(repository)
+        val viewModel = PatternsViewModel(repository, FakeDraftAttachmentStorage())
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.hasHistory)
@@ -62,7 +63,7 @@ class PatternsViewModelTest {
                 ),
             )
         }
-        val viewModel = PatternsViewModel(repository)
+        val viewModel = PatternsViewModel(repository, FakeDraftAttachmentStorage())
         advanceUntilIdle()
 
         assertEquals(2, viewModel.uiState.dailySummaries.size)
@@ -81,7 +82,7 @@ class PatternsViewModelTest {
                 records = listOf(MoodRecord(1, Mood.STEADY, 55, 2, yesterday)),
             )
         }
-        val viewModel = PatternsViewModel(repository)
+        val viewModel = PatternsViewModel(repository, FakeDraftAttachmentStorage())
         advanceUntilIdle()
         val initialDate = viewModel.uiState.selectedDateStart
         viewModel.showNextHistoryDate()
@@ -111,7 +112,7 @@ class PatternsViewModelTest {
         val repository = FakeHeartraceDataSource().apply {
             insights.value = InsightsDataSnapshot(records = records)
         }
-        val viewModel = PatternsViewModel(repository)
+        val viewModel = PatternsViewModel(repository, FakeDraftAttachmentStorage())
         advanceUntilIdle()
         viewModel.selectHistoryDate(januaryStart)
 
@@ -128,7 +129,7 @@ class PatternsViewModelTest {
     @Test
     fun editing_and_delete_delegate_to_repository() = runTest {
         val repository = FakeHeartraceDataSource()
-        val viewModel = PatternsViewModel(repository)
+        val viewModel = PatternsViewModel(repository, FakeDraftAttachmentStorage())
         val record = MoodRecord(9, Mood.LOW, 20, 1, System.currentTimeMillis())
         viewModel.startEditRecord(record)
         assertEquals(record, viewModel.uiState.editingRecord)
@@ -146,7 +147,7 @@ class PatternsViewModelTest {
         val repository = FakeHeartraceDataSource().apply {
             updateCheckInError = IllegalStateException()
         }
-        val viewModel = PatternsViewModel(repository)
+        val viewModel = PatternsViewModel(repository, FakeDraftAttachmentStorage())
         val record = MoodRecord(9, Mood.LOW, 20, 1, System.currentTimeMillis())
         viewModel.startEditRecord(record)
 
@@ -162,7 +163,7 @@ class PatternsViewModelTest {
         val repository = FakeHeartraceDataSource().apply {
             deleteCheckInError = IllegalStateException()
         }
-        val viewModel = PatternsViewModel(repository)
+        val viewModel = PatternsViewModel(repository, FakeDraftAttachmentStorage())
         val record = MoodRecord(9, Mood.LOW, 20, 1, System.currentTimeMillis())
         viewModel.startEditRecord(record)
 

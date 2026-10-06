@@ -184,4 +184,8 @@
     <string name="history_range_day">日</string>
     <string name="history_range_month">月</string>
     <string name="history_range_year">年</string>
+    <string name="avatar_copy_failed">无法导入这张图片，请尝试另一张图片。</string>
+    <string name="average_energy_not_recorded">平均能量：未记录</string>
+    <string name="average_mood_no_data">平均心情：此周期暂无记录</string>
+    <string name="close_image_preview">关闭图片预览</string>
 </resources>

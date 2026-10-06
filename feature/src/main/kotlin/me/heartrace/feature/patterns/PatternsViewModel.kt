@@ -7,14 +7,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.heartrace.data.HeartraceDataSource
 import me.heartrace.data.InsightsDataSnapshot
 import me.heartrace.data.MoodRecord
+import me.heartrace.feature.attachments.DraftAttachmentStorage
 import me.heartrace.feature.metrics.calculateCurrentStreak
 import me.heartrace.feature.metrics.calculateWeeklyGoalProgress
 import me.heartrace.feature.metrics.dayStart
 import me.heartrace.feature.metrics.shiftDays
+import me.heartrace.feature.today.EditRecordDraft
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -23,9 +28,12 @@ class PatternsViewModel
 @Inject
 constructor(
     private val repository: HeartraceDataSource,
+    private val attachments: DraftAttachmentStorage,
 ) : ViewModel() {
     var uiState by mutableStateOf(PatternsUiState())
         private set
+
+    private var hasBeenCleared = false
 
     private var latestSnapshot: InsightsDataSnapshot? = null
     private var selectedDateStart: Long? = null
@@ -120,6 +128,8 @@ constructor(
             historyRange = historyRange,
             canGoToNextDate = selectedPeriodStart < periodStart(todayStart),
             editingRecord = uiState.editingRecord,
+            editingDraft = uiState.editingDraft,
+            isUpdatingRecord = uiState.isUpdatingRecord,
             errorMessage = uiState.errorMessage,
         )
     }
@@ -148,11 +158,30 @@ constructor(
     }.timeInMillis
 
     fun startEditRecord(record: MoodRecord) {
-        uiState = uiState.copy(editingRecord = record, errorMessage = null)
+        if (uiState.isUpdatingRecord) return
+        uiState.editingDraft?.discardAttachments(attachments)
+        uiState = uiState.copy(editingRecord = record, editingDraft = EditRecordDraft(record), errorMessage = null)
+    }
+
+    fun updateEditDraft(record: MoodRecord, transform: (EditRecordDraft) -> EditRecordDraft) {
+        val current = uiState.editingDraft
+        val draft = transform(current?.takeIf { it.record.id == record.id } ?: EditRecordDraft(record))
+        if (uiState.isUpdatingRecord || current?.record?.id != record.id) {
+            (draft.newAttachments - current?.newAttachments.orEmpty()).forEach(attachments::delete)
+            return
+        }
+        current.discardRemovedAttachments(draft, attachments)
+        uiState = uiState.copy(editingDraft = draft)
     }
 
     fun dismissEditRecord() {
-        uiState = uiState.copy(editingRecord = null, errorMessage = null)
+        if (uiState.isUpdatingRecord) return
+        uiState.editingDraft?.discardAttachments(attachments)
+        clearRecordEditor()
+    }
+
+    private fun clearRecordEditor() {
+        uiState = uiState.copy(isUpdatingRecord = false, editingRecord = null, editingDraft = null, errorMessage = null)
     }
 
     fun updateRecord(
@@ -165,39 +194,45 @@ constructor(
         audioUri: String? = null,
         audioDurationMs: Long = 0L,
     ) {
-        uiState = uiState.copy(errorMessage = null)
-        viewModelScope.launch {
-            try {
-                repository.updateCheckIn(
-                    id = id,
-                    moodValue = moodValue,
-                    energyLevel = energyLevel,
-                    momentText = momentText,
-                    recordedAt = recordedAt,
-                    imageUris = imageUris,
-                    audioUri = audioUri,
-                    audioDurationMs = audioDurationMs,
-                )
-                dismissEditRecord()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                uiState = uiState.copy(errorMessage = "save_failed")
+        if (uiState.isUpdatingRecord) return
+        uiState = uiState.copy(isUpdatingRecord = true, errorMessage = null)
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            withContext(NonCancellable) {
+                try {
+                    repository.updateCheckIn(id, moodValue, energyLevel, momentText, recordedAt, imageUris, audioUri, audioDurationMs)
+                    clearRecordEditor()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (hasBeenCleared) uiState.editingDraft?.discardAttachments(attachments)
+                    uiState = uiState.copy(isUpdatingRecord = false, errorMessage = "save_failed")
+                }
             }
         }
     }
 
     fun deleteRecord(id: Long) {
-        uiState = uiState.copy(errorMessage = null)
-        viewModelScope.launch {
-            try {
-                repository.deleteCheckIn(id)
-                dismissEditRecord()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                uiState = uiState.copy(errorMessage = "save_failed")
+        if (uiState.isUpdatingRecord) return
+        uiState = uiState.copy(isUpdatingRecord = true, errorMessage = null)
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            withContext(NonCancellable) {
+                try {
+                    repository.deleteCheckIn(id)
+                    uiState.editingDraft?.discardAttachments(attachments)
+                    clearRecordEditor()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (hasBeenCleared) uiState.editingDraft?.discardAttachments(attachments)
+                    uiState = uiState.copy(isUpdatingRecord = false, errorMessage = "save_failed")
+                }
             }
         }
+    }
+
+    override fun onCleared() {
+        hasBeenCleared = true
+        if (!uiState.isUpdatingRecord) uiState.editingDraft?.discardAttachments(attachments)
+        super.onCleared()
     }
 }

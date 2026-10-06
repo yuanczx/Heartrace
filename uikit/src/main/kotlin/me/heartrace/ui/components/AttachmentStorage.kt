@@ -2,11 +2,27 @@ package me.heartrace.ui.components
 
 import android.content.Context
 import android.net.Uri
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
 private const val MAX_IMAGE_BYTES = 20L * 1024L * 1024L
+
+/** Deletes the imported file if cancellation prevents its delivery to a draft. */
+suspend fun copyImageToInternalStorage(context: Context, uri: Uri): String? {
+    var copiedUri: String? = null
+    return try {
+        withContext(Dispatchers.IO) {
+            copyImageUriToInternalStorage(context, uri).also { copiedUri = it }
+        }
+    } catch (e: CancellationException) {
+        deleteInternalAttachment(context, copiedUri)
+        throw e
+    }
+}
 
 fun copyImageUriToInternalStorage(context: Context, uri: Uri): String? {
     var file: File? = null
