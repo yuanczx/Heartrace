@@ -12,17 +12,6 @@ interface HeartraceDataSource {
 
     fun observeInsights(): Flow<InsightsDataSnapshot>
 
-    suspend fun ensureSeedData()
-
-    suspend fun saveNote(
-        text: String,
-        mood: Mood,
-        recordedAt: Long = System.currentTimeMillis(),
-        imageUris: List<String> = emptyList(),
-        audioUri: String? = null,
-        audioDurationMs: Long = 0L,
-    )
-
     suspend fun saveCheckIn(
         moodValue: Int,
         energyLevel: Int?,

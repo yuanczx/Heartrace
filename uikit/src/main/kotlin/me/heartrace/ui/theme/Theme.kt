@@ -88,8 +88,6 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun HeartraceMaterialTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    @Suppress("Unused")
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val targetPalette = if (darkTheme) DarkPalette else LightPalette

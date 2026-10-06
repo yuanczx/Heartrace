@@ -47,7 +47,6 @@ data class PreferencesSnapshot(
 
 data class TodayDataSnapshot(
     val mood: Mood = Mood.STEADY,
-    val savedNote: String = "",
     val todayNotes: List<DailyNote> = emptyList(),
     val todayMoodRecords: List<MoodRecord> = emptyList(),
     val moodValue: Int = 50,
@@ -79,14 +78,4 @@ fun Int.toMood(): Mood = when {
     this < 80 -> Mood.BRIGHT
     this < 88 -> Mood.RESTLESS
     else -> Mood.ELECTRIC
-}
-
-fun Mood.energyPercent(): Int = when (this) {
-    Mood.DRAINED -> 12
-    Mood.QUIET -> 34
-    Mood.LOW -> 22
-    Mood.STEADY -> 62
-    Mood.BRIGHT -> 78
-    Mood.RESTLESS -> 70
-    Mood.ELECTRIC -> 94
 }

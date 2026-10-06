@@ -1,7 +1,7 @@
 package me.heartrace.feature.you
 
-import me.heartrace.feature.patterns.BadgeKind
-import me.heartrace.feature.patterns.BadgeStatus
+import me.heartrace.feature.metrics.BadgeKind
+import me.heartrace.feature.metrics.BadgeStatus
 
 data class YouUiState(
     val isResetDialogVisible: Boolean = false,

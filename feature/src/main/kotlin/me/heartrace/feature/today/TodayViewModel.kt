@@ -12,7 +12,7 @@ import me.heartrace.data.Mood
 import me.heartrace.data.MoodRecord
 import me.heartrace.data.toMood
 import me.heartrace.data.toMoodValue
-import me.heartrace.feature.patterns.calculateWeeklyGoalProgress
+import me.heartrace.feature.metrics.calculateWeeklyGoalProgress
 import javax.inject.Inject
 
 @HiltViewModel
@@ -26,7 +26,6 @@ constructor(
 
     init {
         viewModelScope.launch {
-            repository.ensureSeedData()
             repository.observeToday().collect { snapshot ->
                 val current = uiState
                 val shouldSyncSelection = current.errorMessage == null && !current.isSaving && current.savedCount == 0 && current.momentDraft.isBlank() && current.imageUris.isEmpty()

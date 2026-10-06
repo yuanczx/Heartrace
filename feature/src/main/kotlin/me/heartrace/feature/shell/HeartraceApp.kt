@@ -25,7 +25,7 @@ fun HeartraceApp() {
             }
         }
     }
-    HeartraceMaterialTheme(darkTheme = !settings.lightTheme, dynamicColor = false) {
+    HeartraceMaterialTheme(darkTheme = !settings.lightTheme) {
         if (settings.isLoaded) HeartraceRoot(settingsViewModel)
     }
 }

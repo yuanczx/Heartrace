@@ -63,8 +63,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import me.heartrace.feature.patterns.BadgeKind
-import me.heartrace.feature.patterns.BadgeStatus
+import me.heartrace.feature.metrics.BadgeKind
+import me.heartrace.feature.metrics.BadgeStatus
 import me.heartrace.ui.components.Coral
 import me.heartrace.ui.components.Cream
 import me.heartrace.ui.components.Lemon

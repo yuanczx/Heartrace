@@ -1,69 +1,102 @@
 # AGENTS.md
 
-## Project Scope
-
 These instructions apply to the entire repository.
 
-Heartrace is an Android app for lightweight mood check-ins, focus sessions, and daily notes. Keep changes aligned with the existing Compose UI and Room-backed state model.
+## Project Overview
 
-## Technology
+Heartrace is a local-first Android app for mood check-ins, short moment notes, personal insights, and daily reminders. Keep changes aligned with the existing single-activity Compose architecture, Room-backed persistence, and English/Chinese localization.
+
+## Toolchain
 
 - Kotlin with Jetpack Compose and Material 3
 - Android Gradle Plugin and Gradle Wrapper
-- Room for local persistence
+- Room with Coroutines/Flow
 - Hilt for dependency injection
 - KSP for Room and Hilt code generation
+- AndroidX Navigation 3
 - Minimum Android SDK: 30
 - Compile and target SDK: 37
 - Java source and target compatibility: 11
 
-## Repository Layout
+## Module Map
 
-- `core/src/main/java/me/heartrace/data`: domain models and repository logic
-- `core/src/main/java/me/heartrace/data/db`: Room entities, DAOs, and database migrations
-- `core/src/main/java/me/heartrace/di`: Hilt providers
-- `core/src/main/java/me/heartrace/ui/components`: reusable Compose components
-- `core/src/main/java/me/heartrace/ui/theme`: Material theme and Heartrace color palettes
-- `core/src/main/java/me/heartrace/ui/localization`: localized UI copy and context handling
-- `core/src/main/res/values*`: core app strings and resources
-- `feature/src/main/java/me/heartrace/feature/today`: Today screen, ViewModel, UI state, and components
-- `feature/src/main/java/me/heartrace/feature/patterns`: Patterns screen, ViewModel, and UI state
-- `feature/src/main/java/me/heartrace/feature/archive`: Archive screen, ViewModel, and UI state
-- `feature/src/main/java/me/heartrace/feature/you`: You screen, ViewModel, and UI state
-- `feature/src/main/java/me/heartrace/feature/shell`: App shell (`HeartraceApp`) and top-level ViewModel
-- `feature/src/main/res/values*`: feature-specific English and Chinese string resources
-- `app/src/main/java/me/heartrace`: Application entry (`HeartraceApplication`) and `MainActivity`
+- `app/src/main/kotlin/me/heartrace`: `Application` and `MainActivity` entry points.
+- `core/src/main/kotlin/me/heartrace/data`: domain models, `HeartraceDataSource`, `HeartraceRepository`, and reminder scheduling.
+- `core/src/main/kotlin/me/heartrace/data/db`: Room entities, DAOs, and `HeartraceDatabase`.
+- `core/src/main/kotlin/me/heartrace/di`: Hilt bindings and database providers.
+- `feature/src/main/kotlin/me/heartrace/feature/today`: Today check-ins, moment editing, energy display, and Today ViewModel state.
+- `feature/src/main/kotlin/me/heartrace/feature/patterns`: Insights history, trends, goals, streaks, badges, and related ViewModel state.
+- `feature/src/main/kotlin/me/heartrace/feature/you`: profile, achievements, preferences, appearance, and reset controls.
+- `feature/src/main/kotlin/me/heartrace/feature/shell`: Compose app shell, tab navigation, and app settings ViewModel.
+- `uikit/src/main/kotlin/me/heartrace/ui/components`: reusable Compose components, attachment handling, navigation chrome, and color aliases.
+- `uikit/src/main/kotlin/me/heartrace/ui/theme`: shared Material 3 theme and custom palette.
+- `uikit/src/main/res/values*`: primary English and Chinese UI strings.
+- `core/src/main/res/values*`: reminder notification strings.
+- `docs`: testing and development notes.
+
+All Kotlin sources are under `src/main/kotlin` or `src/test/kotlin`; do not assume the older `src/main/java` layout.
+
+## Architecture and State
+
+- Preserve the single `MainActivity` plus Compose shell unless a change genuinely requires another activity.
+- Keep screen state in the relevant ViewModel: `TodayViewModel`, `PatternsViewModel`, `YouViewModel`, `AppSettingsViewModel`, or `NoteComposerViewModel`.
+- Use `HeartraceDataSource` as the feature-layer persistence contract. Implement durable behavior in `HeartraceRepository`, not in a screen-local substitute.
+- Derive Today and Insights UI from repository flows backed by Room. Do not reintroduce fixed demo values or duplicate database state in Compose.
+- Keep navigation in `feature/shell`; the three primary destinations are Today, Insights, and You.
+- Use `AdaptiveTwoPane` and the existing navigation rail/bottom bar behavior when adding screen content so compact and large screens remain supported.
+
+## Data and Persistence Rules
+
+- The Room database is `heartrace.db`, currently schema version 5, with `DailyNoteEntity`, `MoodEntryEntity`, and `AppStateEntity`.
+- A mood selection is a durable `MoodEntryEntity` event. Multiple check-ins per day are supported; do not reduce the model to one current mood.
+- `DailyNoteEntity.moodEntryId` links an optional moment note to one mood entry and has a unique index. Preserve that one-to-one relationship when editing or deleting records.
+- Persist preferences through `AppStateEntity`: language, theme, reminders, nickname, avatar URI, and weekly goal days.
+- Add a Room migration for every schema change. Bump the version in `HeartraceDatabase` and register the migration in `DatabaseModule`; do not use destructive migration as a shortcut.
+- Imported images, recorded audio, and avatars are copied into app-private attachment storage by the UIKit helpers. When replacing or deleting an attachment, preserve the repository's cleanup behavior and never delete arbitrary external files.
+- Keep reminder scheduling coordinated with `ReminderSchedulerPort`. Enabling reminders must persist the setting and update the Android alarm; boot and time-change receivers must continue to reschedule it.
+
+## UI, Localization, and Theme
+
+- Put new user-facing UI strings in both `uikit/src/main/res/values/strings.xml` and `uikit/src/main/res/values-zh/strings.xml`. Use `stringResource` in Compose and `context.getString` outside Compose.
+- Put new reminder notification copy in both matching `core/src/main/res/values/strings.xml` and `core/src/main/res/values-zh/strings.xml` files.
+- There is no `HeartraceCopy` abstraction; use Android resource IDs and keep English, Chinese, and system-language behavior working independently from theme selection.
+- Read colors from `HeartraceTheme.colors`, `MaterialTheme.colorScheme`, or the existing aliases in `uikit/src/main/kotlin/me/heartrace/ui/components/Colors.kt`. Avoid hard-coded screen colors that only work in Dark mode.
+- Request and handle runtime permissions through the existing Activity Result patterns. Voice recording requires microphone permission; Android 13+ reminder notifications require notification permission.
+- Keep accessibility labels, content descriptions, and layout behavior in both supported languages.
+- Use ASCII in source and documentation unless a localized resource or product name requires another character set.
 
 ## Development Rules
 
-- Preserve the existing single-activity Compose architecture unless a change requires otherwise.
-- Keep user-visible state in `HeartraceViewModel` and persist durable state through `HeartraceRepository`; do not add screen-local substitutes for persisted data.
-- Add a Room migration whenever an entity or schema changes. Update the database version and register the migration in `DatabaseModule`.
-- Keep all new user-facing text in both `values/strings.xml` and `values-zh/strings.xml`, then expose it through `HeartraceCopy`.
-- Use `HeartraceTheme.colors` or the dynamic component color properties for UI colors. Do not introduce hard-coded dark-only colors in screens.
-- Prefer focused changes. Avoid unrelated formatting or dependency upgrades.
-- Use ASCII in source and documentation unless existing localized resources require another character set.
+- Prefer focused changes and preserve existing naming, package structure, and dependency direction.
+- Avoid unrelated formatting, dependency upgrades, or architecture migrations.
+- Do not commit changes or create branches unless the user explicitly asks.
+- Do not add new libraries when existing AndroidX, Compose, Room, Hilt, or UIKit helpers solve the problem.
+- Update relevant tests and documentation when behavior or developer workflow changes.
 
 ## Verification
 
-Run the Kotlin compilation task after source changes:
+Run commands from the repository root. On Windows, use `gradlew.bat` instead of `./gradlew`.
 
-```powershell
-.\gradlew.bat :app:compileDebugKotlin
+```bash
+./gradlew :app:compileDebugKotlin
+./gradlew :app:testDebugUnitTest
+./gradlew spotlessCheck
 ```
 
-Run unit tests when the local Gradle distribution and dependencies are available:
+For Room, permission, navigation, or Compose changes, also run connected tests when an emulator or device is available:
 
-```powershell
-.\gradlew.bat :app:testDebugUnitTest
+```bash
+./gradlew :core:connectedDebugAndroidTest :app:connectedDebugAndroidTest
 ```
 
-For database or UI changes, also inspect the generated Room code/build output and perform an install or emulator smoke test when an Android device is available. Do not treat a successful compile as proof that navigation, persistence, or theme switching works at runtime.
+Inspect generated Room/build output after schema changes. A successful compile does not prove navigation, persistence, permission prompts, reminder delivery, or theme switching work at runtime; perform an install or emulator smoke test for those changes.
 
-## Data and UI Contracts
+## Change Checklist
 
-- `HeartraceUiState` is the UI contract consumed by all screens. Add derived values there when multiple screens need the same data.
-- Focus completions are stored as `FocusSessionEntity` records. Pattern metrics should be derived from those records rather than reintroducing fixed demo values.
-- Mood check-ins are stored as timestamped `MoodEntryEntity` records. Selecting a mood is a durable event, not only a current-state update.
-- Theme preference is persisted as part of `AppStateEntity`; changes must survive process recreation.
-- The app currently supports English and Chinese. Keep language selection and theme selection independent.
+Before handing off a change, confirm:
+
+1. The implementation uses the existing module and state boundaries.
+2. Persisted data changes include a migration and relevant tests.
+3. New user-facing copy exists in English and Chinese resources.
+4. Light theme, Dark theme, compact layouts, and large-screen layouts remain usable.
+5. The narrowest relevant Gradle verification tasks pass, or any unavailable environment/device limitation is reported.

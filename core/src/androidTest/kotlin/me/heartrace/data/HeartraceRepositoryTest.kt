@@ -62,10 +62,11 @@ class HeartraceRepositoryTest {
     }
 
     @Test
-    fun saveNote_creates_joined_mood_record_and_preserves_attachments() = runBlocking {
-        repository.saveNote(
-            text = "  clear head  ",
-            mood = Mood.BRIGHT,
+    fun saveCheckIn_creates_joined_moment_and_preserves_attachments() = runBlocking {
+        repository.saveCheckIn(
+            moodValue = 72,
+            energyLevel = 3,
+            momentText = "  clear head  ",
             imageUris = listOf("file://one", "file://two"),
             audioUri = "file://voice",
             audioDurationMs = 2_500L,
@@ -85,8 +86,12 @@ class HeartraceRepositoryTest {
 
     @Test
     fun updateCheckIn_removes_empty_note_and_updates_entry() = runBlocking {
-        repository.saveNote("old", Mood.LOW, System.currentTimeMillis(), emptyList(), null, 0L)
-        val id = repository.loadTodaySnapshot().todayMoodRecords.single().id
+        val id = repository.saveCheckIn(
+            moodValue = 25,
+            energyLevel = 1,
+            momentText = "old",
+            recordedAt = System.currentTimeMillis(),
+        )
 
         repository.updateCheckIn(
             id = id,
@@ -164,7 +169,12 @@ class HeartraceRepositoryTest {
                 moodEntryId = oldId,
             ),
         )
-        repository.saveNote("today note", Mood.STEADY, System.currentTimeMillis(), emptyList(), null, 0L)
+        repository.saveCheckIn(
+            moodValue = 55,
+            energyLevel = 2,
+            momentText = "today note",
+            recordedAt = System.currentTimeMillis(),
+        )
 
         val insights = repository.observeInsights().first()
         assertEquals(2, insights.records.size)

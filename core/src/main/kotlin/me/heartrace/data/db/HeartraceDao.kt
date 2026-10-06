@@ -12,26 +12,14 @@ interface DailyNoteDao {
     @Query("SELECT * FROM daily_notes ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<DailyNoteEntity>>
 
-    @Query("SELECT * FROM daily_notes ORDER BY createdAt DESC LIMIT :limit")
-    fun observeRecent(limit: Int): Flow<List<DailyNoteEntity>>
-
     @Query("SELECT * FROM daily_notes WHERE createdAt >= :start AND createdAt <= :end ORDER BY createdAt DESC")
     fun observeBetween(start: Long, end: Long): Flow<List<DailyNoteEntity>>
-
-    @Query("SELECT * FROM daily_notes WHERE createdAt >= :timestamp")
-    suspend fun findSince(timestamp: Long): List<DailyNoteEntity>
 
     @Query("SELECT * FROM daily_notes WHERE createdAt >= :start AND createdAt < :end")
     suspend fun findBetween(start: Long, end: Long): List<DailyNoteEntity>
 
-    @Query("SELECT COUNT(*) FROM daily_notes")
-    suspend fun count(): Int
-
     @Insert
     suspend fun insert(note: DailyNoteEntity): Long
-
-    @Insert
-    suspend fun insertAll(notes: List<DailyNoteEntity>)
 
     @Query("SELECT * FROM daily_notes WHERE moodEntryId = :moodEntryId LIMIT 1")
     suspend fun findByMoodEntryId(moodEntryId: Long): DailyNoteEntity?
@@ -41,9 +29,6 @@ interface DailyNoteDao {
 
     @Query("DELETE FROM daily_notes WHERE moodEntryId = :moodEntryId")
     suspend fun deleteByMoodEntryId(moodEntryId: Long)
-
-    @Query("DELETE FROM daily_notes WHERE createdAt >= :timestamp")
-    suspend fun deleteSince(timestamp: Long)
 
     @Query("DELETE FROM daily_notes WHERE createdAt >= :start AND createdAt < :end")
     suspend fun deleteBetween(start: Long, end: Long)
@@ -60,16 +45,10 @@ interface AppStateDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(state: AppStateEntity)
 
-    @Query("UPDATE app_state SET savedNote = '' WHERE id = 1")
-    suspend fun clearSavedNote()
-
     @Query("UPDATE app_state SET mood = :mood WHERE id = 1")
     suspend fun updateMood(mood: String)
 
-    @Query("UPDATE app_state SET weeklyGoalDays = :days WHERE id = 1")
-    suspend fun updateWeeklyGoalDays(days: Int)
-
-    @Query("UPDATE app_state SET mood = 'STEADY', savedNote = '' WHERE id = 1")
+    @Query("UPDATE app_state SET mood = 'STEADY' WHERE id = 1")
     suspend fun resetToday()
 }
 
@@ -77,9 +56,6 @@ interface AppStateDao {
 interface MoodEntryDao {
     @Query("SELECT * FROM mood_entries ORDER BY recordedAt DESC")
     fun observeAll(): Flow<List<MoodEntryEntity>>
-
-    @Query("SELECT * FROM mood_entries ORDER BY recordedAt DESC LIMIT :limit")
-    fun observeRecent(limit: Int): Flow<List<MoodEntryEntity>>
 
     @Query("SELECT * FROM mood_entries WHERE recordedAt >= :start AND recordedAt <= :end ORDER BY recordedAt DESC")
     fun observeBetween(start: Long, end: Long): Flow<List<MoodEntryEntity>>
@@ -95,9 +71,6 @@ interface MoodEntryDao {
 
     @Query("DELETE FROM mood_entries WHERE id = :id")
     suspend fun deleteById(id: Long)
-
-    @Query("DELETE FROM mood_entries WHERE recordedAt >= :timestamp")
-    suspend fun deleteSince(timestamp: Long)
 
     @Query("DELETE FROM mood_entries WHERE recordedAt >= :start AND recordedAt < :end")
     suspend fun deleteBetween(start: Long, end: Long)

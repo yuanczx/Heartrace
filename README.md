@@ -1,78 +1,122 @@
 # Heartrace
 
-Heartrace is a small Android companion for building a gentler daily rhythm. It combines timestamped mood check-ins, short moment notes, and simple patterns derived from local activity.
-
-The English app name is **Heartrace**; the Chinese app name is **心迹** (a trace of your mood).
+Heartrace (Chinese: **心迹**) is a local-first Android app for noticing your mood, capturing small moments, and learning from your own patterns over time. It is designed for lightweight daily check-ins rather than long-form journaling or social sharing.
 
 ## Features
 
-- Tap `+` at any time to choose one of seven mood states and save a timestamped check-in, with or without a note. Multiple moments can be captured each day.
-- Choose the date and time for each moment, including backfilled check-ins from earlier today or another day.
-- See today\'s energy curve and moment timeline on Today.
-- Switch the interface between English and Chinese.
-- Manually switch between Dark and Light themes from `You -> Appearance`; the choice is persisted locally.
+- **Today**: record one or more check-ins each day using seven mood states and an optional energy level.
+- **Moments**: attach text, multiple images, and a voice note to a check-in; choose or edit the recorded date and time.
+- **Insights**: review day, month, and year history with mood and energy trends, active days, weekly goals, streaks, and achievement badges.
+- **You**: edit a nickname and avatar, choose the weekly goal, switch reminders on or off, change language, change theme, and reset today's records.
+- **Localization**: English, Chinese, and system language selection.
+- **Themes**: persisted Light and Dark themes with a custom Material 3 palette and layouts that adapt to larger screens.
+- **Reminders**: an optional daily check-in notification scheduled through Android alarms.
 
-## Stack
+All mood records, notes, preferences, images, and voice notes remain on the device. The app does not require a network service or account.
 
-- Kotlin
-- Jetpack Compose and Material 3
-- Room
-- Hilt
-- KSP
+## Tech Stack
 
-The app uses a single activity with screen-scoped MVVM. `TodayViewModel`, `PatternsViewModel`, and `YouViewModel` own screen state and events. `HeartraceRepository` exposes minimal data flows for each screen, and reusable Compose components render those states.
+- Kotlin and Jetpack Compose
+- Material 3
+- Room and Kotlin Coroutines/Flow
+- Hilt for dependency injection
+- KSP for Room and Hilt code generation
+- AndroidX Navigation 3
+- Gradle Version Catalog and Gradle Wrapper
+
+The app uses a single activity and a Compose navigation shell. Screen ViewModels consume the `HeartraceDataSource` contract, while `HeartraceRepository` coordinates Room flows, attachment cleanup, settings, and reminders.
+
+## Project Layout
+
+```text
+app/       Application entry point, manifest, signing, and instrumentation tests
+core/      Domain models, data-source contract, Room database, repository, reminders
+feature/   Compose screens, screen ViewModels, UI state, navigation, and feature tests
+uikit/     Shared Compose components, theme, attachment UI, and localized strings
+docs/      Development and testing notes
+```
+
+The Gradle dependency direction is intentionally small:
+
+```text
+app -> feature -> core
+app -> uikit -> core
+feature -> uikit
+```
 
 ## Requirements
 
-- Android Studio with Android SDK 37 installed
+- Android Studio with Android SDK Platform 37
 - JDK 11
-- Android device or emulator running API 30 or newer
+- An Android device or emulator running API 30 or newer
+
+The project uses compile and target SDK 37, minimum SDK 30, and Java source/target compatibility 11. The application id is `me.heartrace`.
 
 ## Build and Run
 
-From the repository root:
+From the repository root, use the Gradle wrapper:
 
-```powershell
+```bash
+# macOS/Linux
+./gradlew :app:assembleDebug
+
+# Windows PowerShell
 .\gradlew.bat :app:assembleDebug
 ```
 
-To verify Kotlin compilation without packaging:
+Open the project in Android Studio and run the `app` configuration on a connected device or emulator. The debug build is signed with the checked-in test key for local development.
 
-```powershell
-.\gradlew.bat :app:compileDebugKotlin
+Useful verification tasks:
+
+```bash
+./gradlew :app:compileDebugKotlin
+./gradlew :app:testDebugUnitTest
+./gradlew spotlessCheck
 ```
 
-To run local unit tests:
+On Windows, replace `./gradlew` with `.\gradlew.bat`.
 
-```powershell
-.\gradlew.bat :app:testDebugUnitTest
+Connected Room and Compose tests require a device or emulator:
+
+```bash
+./gradlew :core:connectedDebugAndroidTest :app:connectedDebugAndroidTest
 ```
 
-Debug and release APKs use the checked-in test signing key automatically, so no manual signing setup is required for local builds. The key and its `android` password are for testing only and must not be used for production releases.
+See [`docs/testing.md`](docs/testing.md) for test ownership and the optional JaCoCo coverage task.
 
-For a production-signed APK, create or obtain a private keystore and copy `keystore.properties.example` to `keystore.properties`. Set `storeFile`, `storePassword`, `keyAlias`, and `keyPassword` to the real signing values; `keystore.properties` is ignored by Git. When that file is present and complete, `release` automatically uses the `production` signing config:
+## Release Signing
 
-```powershell
-keytool -genkeypair -v -keystore keystore\release.jks -alias heartrace-release -keyalg RSA -keysize 2048 -validity 10000
-Copy-Item keystore.properties.example keystore.properties
-# Edit keystore.properties with the generated keystore path and passwords.
-.\gradlew.bat :app:assembleRelease
+For local builds, the `release` variant falls back to the test signing key when no production signing properties are present. Do not publish an APK signed with that key.
+
+To configure a production-signed build:
+
+1. Copy `keystore.properties.example` to `keystore.properties`.
+2. Set `storeFile`, `storePassword`, `keyAlias`, and `keyPassword` to a private keystore's values.
+3. Keep both the keystore and `keystore.properties` out of version control.
+4. Build the release artifact:
+
+```bash
+./gradlew :app:assembleRelease
 ```
 
-Keep the keystore and passwords backed up securely. Never commit either the keystore or `keystore.properties`; losing the production keystore prevents publishing updates signed with the same key.
+The release build enables code shrinking and resource shrinking. Losing the production keystore prevents publishing updates signed with the same key.
 
-Open the project in Android Studio and run the `app` configuration on a connected device or emulator. The application id is `me.heartrace`.
+## Local Persistence
 
-## Persistence
+Room stores data in the app-private database `heartrace.db`. The current schema contains:
 
-Heartrace stores app state, timestamped mood check-ins, and daily notes in the local Room database `heartrace.db`. No network service is required.
+- `MoodEntryEntity`: timestamped mood and optional energy records.
+- `DailyNoteEntity`: text and attachments linked to at most one mood entry.
+- `AppStateEntity`: current preferences, profile data, and the latest mood fallback.
 
-## Main Screens
-
-- **Today**: timer, real mood-derived energy curve, and today\'s moment timeline.
-- **Insights**: mood and energy trends derived from saved check-ins.
-- **You**: language, theme, version information, and reset controls.
+Imported images, voice recordings, and avatars are copied into the app-private `files/attachments` directory. No remote backup or synchronization is implemented.
 
 ## Localization and Themes
 
-English resources live under `app/src/main/res/values`; Chinese resources live under `app/src/main/res/values-zh`. Theme palettes are defined in `ui/theme/Theme.kt`, while components read the current palette through `HeartraceTheme.colors` so Light and Dark modes cover the full UI.
+Most user-facing strings live in `uikit/src/main/res/values/strings.xml` and `uikit/src/main/res/values-zh/strings.xml`. Reminder notification strings live in the matching resource directories under `core`. Keep the English and Chinese resources in sync when adding copy.
+
+The shared palette and Material 3 theme live in `uikit/src/main/kotlin/me/heartrace/ui/theme/Theme.kt`. Components should read colors from `HeartraceTheme.colors` or the aliases in `uikit/src/main/kotlin/me/heartrace/ui/components/Colors.kt` so both Light and Dark themes remain usable.
+
+## License
+
+No license has been declared in this repository yet.

@@ -115,32 +115,9 @@ constructor(
         }
     }
 
-    override suspend fun ensureSeedData() {
+    private suspend fun ensureState() {
         stateMutex.withLock {
             if (stateDao.get() == null) stateDao.upsert(AppStateEntity())
-        }
-    }
-
-    override suspend fun saveNote(
-        text: String,
-        mood: Mood,
-        recordedAt: Long,
-        imageUris: List<String>,
-        audioUri: String?,
-        audioDurationMs: Long,
-    ) {
-        ensureSeedData()
-        database.withTransaction {
-            val safeRecordedAt = recordedAt.coerceAtMost(System.currentTimeMillis())
-            saveCheckInInternal(
-                mood.toMoodValue(),
-                mood.energyLevel(),
-                safeRecordedAt,
-                text,
-                imageUris,
-                audioUri,
-                audioDurationMs,
-            )
         }
     }
 
@@ -153,7 +130,7 @@ constructor(
         audioUri: String?,
         audioDurationMs: Long,
     ): Long = run {
-        ensureSeedData()
+        ensureState()
         database.withTransaction {
             saveCheckInInternal(moodValue, energyLevel, recordedAt, momentText, imageUris, audioUri, audioDurationMs)
         }
@@ -172,7 +149,6 @@ constructor(
         val boundedEnergy = energyLevel?.coerceIn(1, 3)
         val mood = boundedMood.toMood().name
         val safeRecordedAt = recordedAt.coerceAtMost(System.currentTimeMillis())
-        stateDao.clearSavedNote()
         val id = moodEntryDao.insert(
             MoodEntryEntity(
                 mood = mood,
@@ -255,7 +231,7 @@ constructor(
         audioUri: String?,
         audioDurationMs: Long,
     ) {
-        ensureSeedData()
+        ensureState()
         var obsoleteAttachments = emptyList<String>()
         database.withTransaction {
             val boundedMood = moodValue.coerceIn(0, 100)
@@ -311,7 +287,7 @@ constructor(
     }
 
     override suspend fun deleteCheckIn(id: Long) {
-        ensureSeedData()
+        ensureState()
         var attachments = emptyList<String>()
         database.withTransaction {
             attachments = noteDao.findByMoodEntryId(id)?.attachmentUris().orEmpty()
@@ -349,7 +325,7 @@ constructor(
     }
 
     override suspend fun resetToday() {
-        ensureSeedData()
+        ensureState()
         val todayStart = startOfDay(System.currentTimeMillis())
         val tomorrowStart = nextStartOfDay(todayStart)
         val attachments = mutableListOf<String>()
@@ -403,7 +379,6 @@ constructor(
         val saved = state ?: AppStateEntity()
         return TodayDataSnapshot(
             mood = records.firstOrNull()?.mood ?: saved.mood.toMood(),
-            savedNote = saved.savedNote,
             todayNotes = noteModels,
             todayMoodRecords = records.map { record ->
                 val note = notesByEntryId[record.id]
@@ -461,12 +436,6 @@ constructor(
     private fun String.toMood() = runCatching { Mood.valueOf(this) }.getOrDefault(Mood.STEADY)
 
     private fun String.toMoodValue() = toMood().toMoodValue()
-
-    private fun Mood.energyLevel(): Int = when (this) {
-        Mood.DRAINED, Mood.LOW -> 1
-        Mood.QUIET, Mood.STEADY, Mood.RESTLESS -> 2
-        Mood.BRIGHT, Mood.ELECTRIC -> 3
-    }
 
     private fun startOfDay(time: Long): Long = Calendar
         .getInstance()

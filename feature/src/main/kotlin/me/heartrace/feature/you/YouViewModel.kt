@@ -8,8 +8,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import me.heartrace.data.HeartraceDataSource
-import me.heartrace.feature.patterns.BadgeKind
-import me.heartrace.feature.patterns.calculateBadges
+import me.heartrace.feature.metrics.BadgeKind
+import me.heartrace.feature.metrics.calculateBadges
 import javax.inject.Inject
 
 @HiltViewModel

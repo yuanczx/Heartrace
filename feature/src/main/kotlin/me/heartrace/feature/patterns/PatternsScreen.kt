@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import me.heartrace.feature.metrics.WeeklyGoalProgress
 import me.heartrace.feature.today.EditRecordSheet
 import me.heartrace.feature.today.MoodRecordRow
 import me.heartrace.ui.components.AdaptiveTwoPane

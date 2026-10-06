@@ -2,6 +2,7 @@ package me.heartrace.feature.today
 
 import me.heartrace.data.Mood
 import me.heartrace.data.MoodRecord
+import me.heartrace.feature.metrics.WeeklyGoalProgress
 
 data class TodayUiState(
     val selectedMood: Mood = Mood.STEADY,
@@ -20,5 +21,5 @@ data class TodayUiState(
     val audioDurationMs: Long = 0L,
     val recordedAt: Long? = null,
     val savedCount: Int = 0,
-    val weeklyGoal: me.heartrace.feature.patterns.WeeklyGoalProgress = me.heartrace.feature.patterns.WeeklyGoalProgress(5, 0, 5, false),
+    val weeklyGoal: WeeklyGoalProgress = WeeklyGoalProgress(5, 0, 5, false),
 )

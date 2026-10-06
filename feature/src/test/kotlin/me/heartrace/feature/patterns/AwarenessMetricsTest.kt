@@ -3,6 +3,12 @@ package me.heartrace.feature.patterns
 import me.heartrace.data.Mood
 import me.heartrace.data.MoodRecord
 import me.heartrace.data.toMoodValue
+import me.heartrace.feature.metrics.BadgeKind
+import me.heartrace.feature.metrics.calculateBadges
+import me.heartrace.feature.metrics.calculateCurrentStreak
+import me.heartrace.feature.metrics.calculateWeeklyGoalProgress
+import me.heartrace.feature.metrics.shiftDays
+import me.heartrace.feature.metrics.weekStart
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

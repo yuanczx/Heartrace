@@ -11,6 +11,10 @@ import kotlinx.coroutines.launch
 import me.heartrace.data.HeartraceDataSource
 import me.heartrace.data.InsightsDataSnapshot
 import me.heartrace.data.MoodRecord
+import me.heartrace.feature.metrics.calculateCurrentStreak
+import me.heartrace.feature.metrics.calculateWeeklyGoalProgress
+import me.heartrace.feature.metrics.dayStart
+import me.heartrace.feature.metrics.shiftDays
 import java.util.Calendar
 import javax.inject.Inject
 

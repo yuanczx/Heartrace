@@ -6,7 +6,7 @@ import kotlinx.coroutines.test.runTest
 import me.heartrace.data.InsightsDataSnapshot
 import me.heartrace.data.Mood
 import me.heartrace.data.MoodRecord
-import me.heartrace.feature.patterns.BadgeKind
+import me.heartrace.feature.metrics.BadgeKind
 import me.heartrace.feature.testing.FakeHeartraceDataSource
 import me.heartrace.feature.testing.MainDispatcherRule
 import org.junit.Assert.assertEquals

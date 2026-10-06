@@ -5,7 +5,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import me.heartrace.data.AppLanguage
 import me.heartrace.data.HeartraceDataSource
 import me.heartrace.data.InsightsDataSnapshot
-import me.heartrace.data.Mood
 import me.heartrace.data.PreferencesSnapshot
 import me.heartrace.data.TodayDataSnapshot
 
@@ -15,13 +14,11 @@ class FakeHeartraceDataSource : HeartraceDataSource {
     val insights = MutableStateFlow(InsightsDataSnapshot())
     val savedCheckIns = mutableListOf<CheckInCall>()
     val savedMoments = mutableListOf<MomentCall>()
-    val savedNotes = mutableListOf<NoteCall>()
     val updatedRecords = mutableListOf<UpdateCall>()
     val deletedRecordIds = mutableListOf<Long>()
     var nextId = 1L
     var saveCheckInError: Throwable? = null
     var saveMomentError: Throwable? = null
-    var saveNoteError: Throwable? = null
     var updateCheckInError: Throwable? = null
     var deleteCheckInError: Throwable? = null
 
@@ -30,15 +27,6 @@ class FakeHeartraceDataSource : HeartraceDataSource {
     data class MomentCall(
         val id: Long,
         val text: String,
-        val imageUris: List<String>,
-        val audioUri: String?,
-        val audioDurationMs: Long,
-    )
-
-    data class NoteCall(
-        val text: String,
-        val mood: Mood,
-        val recordedAt: Long,
         val imageUris: List<String>,
         val audioUri: String?,
         val audioDurationMs: Long,
@@ -59,20 +47,6 @@ class FakeHeartraceDataSource : HeartraceDataSource {
     override suspend fun loadTodaySnapshot(): TodayDataSnapshot = today.value
 
     override fun observeInsights(): Flow<InsightsDataSnapshot> = insights
-
-    override suspend fun ensureSeedData() = Unit
-
-    override suspend fun saveNote(
-        text: String,
-        mood: Mood,
-        recordedAt: Long,
-        imageUris: List<String>,
-        audioUri: String?,
-        audioDurationMs: Long,
-    ) {
-        saveNoteError?.let { throw it }
-        savedNotes += NoteCall(text, mood, recordedAt, imageUris, audioUri, audioDurationMs)
-    }
 
     override suspend fun saveCheckIn(
         moodValue: Int,

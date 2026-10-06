@@ -1,4 +1,4 @@
-package me.heartrace.feature.patterns
+package me.heartrace.feature.metrics
 
 import me.heartrace.data.MoodRecord
 import java.util.Calendar
