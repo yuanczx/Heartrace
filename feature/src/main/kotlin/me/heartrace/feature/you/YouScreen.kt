@@ -12,15 +12,20 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
@@ -68,13 +73,17 @@ import me.heartrace.uikit.R as FeatureR
 @Composable
 fun YouScreen(
     settingsViewModel: AppSettingsViewModel,
+    contentMaxWidth: androidx.compose.ui.unit.Dp,
+    horizontalContentPadding: androidx.compose.ui.unit.Dp,
+    verticalContentPadding: androidx.compose.ui.unit.Dp,
     viewModel: YouViewModel = hiltViewModel(),
 ) {
     val state = viewModel.uiState
     val settings = settingsViewModel.uiState
+    val settingsScrollState = rememberScrollState()
     AnimatedContent(
         targetState = state.isAchievementsVisible,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxSize(),
         transitionSpec = {
             val slideSpec = tween<IntOffset>(durationMillis = 280)
             val fadeSpec = tween<Float>(durationMillis = 180)
@@ -95,14 +104,31 @@ fun YouScreen(
                 celebration = state.badgeCelebration,
                 onBack = viewModel::closeAchievements,
                 onDismissCelebration = viewModel::dismissBadgeCelebration,
+                contentMaxWidth = contentMaxWidth,
+                horizontalContentPadding = horizontalContentPadding,
+                verticalContentPadding = verticalContentPadding,
             )
         } else {
-            YouSettingsContent(
-                settingsViewModel = settingsViewModel,
-                viewModel = viewModel,
-                state = state,
-                settings = settings,
-            )
+            Box(Modifier.fillMaxSize()) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = contentMaxWidth)
+                        .align(Alignment.TopCenter)
+                        .verticalScroll(settingsScrollState)
+                        .padding(
+                            horizontal = horizontalContentPadding,
+                            vertical = verticalContentPadding,
+                        ),
+                ) {
+                    YouSettingsContent(
+                        settingsViewModel = settingsViewModel,
+                        viewModel = viewModel,
+                        state = state,
+                        settings = settings,
+                    )
+                }
+            }
         }
     }
 }

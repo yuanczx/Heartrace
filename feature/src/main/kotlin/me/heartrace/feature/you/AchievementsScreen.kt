@@ -7,11 +7,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Icon
@@ -34,6 +38,7 @@ import me.heartrace.feature.metrics.BadgeKind
 import me.heartrace.feature.metrics.BadgeStatus
 import me.heartrace.ui.components.Coral
 import me.heartrace.ui.components.Cream
+import me.heartrace.ui.components.Ink
 import me.heartrace.ui.components.Lemon
 import me.heartrace.ui.components.Muted
 import me.heartrace.ui.components.Panel
@@ -46,49 +51,79 @@ internal fun AchievementsScreen(
     celebration: List<BadgeKind>,
     onBack: () -> Unit,
     onDismissCelebration: () -> Unit,
+    contentMaxWidth: androidx.compose.ui.unit.Dp,
+    horizontalContentPadding: androidx.compose.ui.unit.Dp,
+    verticalContentPadding: androidx.compose.ui.unit.Dp,
 ) {
     var selectedBadge by remember { mutableStateOf<BadgeStatus?>(null) }
     BackHandler(enabled = selectedBadge == null, onBack = onBack)
     val earned = badges.count { it.earned }
-    Column {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+    Column(Modifier.fillMaxSize()) {
+        Surface(
+            color = Ink,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .padding(end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = Cream)
+                    Icon(
+                        Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = stringResource(R.string.back),
+                        tint = Cream,
+                    )
                 }
                 Text(
                     stringResource(R.string.badges_title),
                     color = Cream,
-                    fontSize = 29.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    stringResource(R.string.badges_earned_count, earned, badges.size),
+                    color = Muted,
+                    fontSize = 11.sp,
                 )
             }
-            Text(
-                stringResource(R.string.badges_earned_count, earned, badges.size),
-                color = Muted,
-                fontSize = 11.sp,
-            )
         }
-        Text(
-            stringResource(R.string.achievements_page_subtitle),
-            color = Muted,
-            fontSize = 14.sp,
-            modifier = Modifier.padding(start = 16.dp),
-        )
-        Spacer(Modifier.height(23.dp))
-        BadgeOverviewCard(earned = earned, total = badges.size)
-        Spacer(Modifier.height(22.dp))
-        BadgesSection(
-            badges = badges,
-            celebration = celebration,
-            onDismissCelebration = onDismissCelebration,
-            onBadgeClick = { selectedBadge = it },
-            showHeading = false,
-        )
+        Column(
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = contentMaxWidth)
+                    .align(Alignment.CenterHorizontally)
+                    .padding(
+                        horizontal = horizontalContentPadding,
+                        vertical = verticalContentPadding,
+                    ),
+            ) {
+                Text(
+                    stringResource(R.string.achievements_page_subtitle),
+                    color = Muted,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(start = 16.dp),
+                )
+                Spacer(Modifier.height(23.dp))
+                BadgeOverviewCard(earned = earned, total = badges.size)
+                Spacer(Modifier.height(22.dp))
+                BadgesSection(
+                    badges = badges,
+                    celebration = celebration,
+                    onDismissCelebration = onDismissCelebration,
+                    onBadgeClick = { selectedBadge = it },
+                    showHeading = false,
+                )
+            }
+        }
     }
     selectedBadge?.let { badge ->
         BadgeDetailSheet(

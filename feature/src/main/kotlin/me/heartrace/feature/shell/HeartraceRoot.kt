@@ -50,18 +50,6 @@ internal fun HeartraceRoot(settingsViewModel: AppSettingsViewModel) {
     val initialPage = remember { tabs.indexOf(currentDestination).coerceAtLeast(0) }
     val pagerState = rememberPagerState(initialPage = initialPage) { tabs.size }
     val coroutineScope = rememberCoroutineScope()
-    val entryProvider = remember {
-        entryProvider {
-            entry<HeartraceDestination.Today> { TodayScreen() }
-            entry<HeartraceDestination.Insights> { PatternsScreen() }
-            entry<HeartraceDestination.You> { YouScreen(settingsViewModel) }
-        }
-    }
-    val entryDecorators = listOf(
-        rememberSaveableStateHolderNavEntryDecorator(),
-        rememberViewModelStoreNavEntryDecorator<HeartraceDestination>(),
-    )
-    val decoratedEntries = rememberDecoratedNavEntries(backStack = tabs, entryDecorators = entryDecorators, entryProvider = entryProvider)
     LaunchedEffect(pagerState.settledPage) {
         val targetDestination = tabs[pagerState.settledPage]
         if (backStack.lastOrNull() != targetDestination) {
@@ -95,6 +83,25 @@ internal fun HeartraceRoot(settingsViewModel: AppSettingsViewModel) {
         }
         val horizontalContentPadding = if (useNavigationRail) 32.dp else 22.dp
         val verticalContentPadding = if (useNavigationRail) 28.dp else 20.dp
+        val entryProvider = remember(contentMaxWidth, horizontalContentPadding, verticalContentPadding) {
+            entryProvider {
+                entry<HeartraceDestination.Today> { TodayScreen() }
+                entry<HeartraceDestination.Insights> { PatternsScreen() }
+                entry<HeartraceDestination.You> {
+                    YouScreen(
+                        settingsViewModel = settingsViewModel,
+                        contentMaxWidth = contentMaxWidth,
+                        horizontalContentPadding = horizontalContentPadding,
+                        verticalContentPadding = verticalContentPadding,
+                    )
+                }
+            }
+        }
+        val entryDecorators = listOf(
+            rememberSaveableStateHolderNavEntryDecorator(),
+            rememberViewModelStoreNavEntryDecorator<HeartraceDestination>(),
+        )
+        val decoratedEntries = rememberDecoratedNavEntries(backStack = tabs, entryDecorators = entryDecorators, entryProvider = entryProvider)
         val indicatorPosition =
             @SuppressLint("FrequentlyChangingValue")
             (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, tabs.lastIndex.toFloat())
@@ -132,18 +139,33 @@ internal fun HeartraceRoot(settingsViewModel: AppSettingsViewModel) {
                     verticalAlignment = Alignment.Top,
                 ) { page ->
                     val entry = decoratedEntries.getOrNull(page)
-                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .widthIn(max = contentMaxWidth)
-                                .align(Alignment.CenterHorizontally)
-                                .padding(
-                                    horizontal = horizontalContentPadding,
-                                    vertical = verticalContentPadding,
-                                ),
-                        ) {
+                    val isYouPage = page == tabs.indexOf(HeartraceDestination.You)
+                    Column(
+                        Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (isYouPage) {
+                                    Modifier
+                                } else {
+                                    Modifier.verticalScroll(rememberScrollState())
+                                },
+                            ),
+                    ) {
+                        if (isYouPage) {
                             entry?.Content()
+                        } else {
+                            Column(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .widthIn(max = contentMaxWidth)
+                                    .align(Alignment.CenterHorizontally)
+                                    .padding(
+                                        horizontal = horizontalContentPadding,
+                                        vertical = verticalContentPadding,
+                                    ),
+                            ) {
+                                entry?.Content()
+                            }
                         }
                     }
                 }
