@@ -108,11 +108,13 @@ constructor(
             InsightsDataSnapshot(
                 records = records,
                 notes = noteModels,
-                recentRecords = records.filter { it.recordedAt >= startOfRecentWindow() },
             )
         }
-        return combine(historyFlow, stateDao.observe()) { history, state ->
-            history.copy(weeklyGoalDays = state?.weeklyGoalDays?.coerceIn(3, 7) ?: 5)
+        return combine(historyFlow, stateDao.observe(), dayTicker()) { history, state, _ ->
+            history.copy(
+                recentRecords = history.records.filter { it.recordedAt >= startOfRecentWindow() },
+                weeklyGoalDays = state?.weeklyGoalDays?.coerceIn(3, 7) ?: 5,
+            )
         }
     }
 

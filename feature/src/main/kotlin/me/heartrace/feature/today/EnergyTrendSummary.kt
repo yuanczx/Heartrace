@@ -14,7 +14,9 @@ internal fun energyTrendSummary(records: List<MoodRecord>): String {
     val first = sorted.first()
     val last = sorted.last()
     val moodDelta = last.moodValue - first.moodValue
-    val energyDelta = (last.energyLevel ?: 2) - (first.energyLevel ?: 2)
+    val energyDelta = first.energyLevel?.let { firstEnergy ->
+        last.energyLevel?.let { lastEnergy -> lastEnergy - firstEnergy }
+    }
 
     if (sorted.size >= 3) {
         var directionChanges = 0
@@ -31,8 +33,8 @@ internal fun energyTrendSummary(records: List<MoodRecord>): String {
     }
 
     return when {
-        moodDelta > 6 || (moodDelta >= 0 && energyDelta > 0) -> stringResource(R.string.gentle_climb)
-        moodDelta < -6 || (moodDelta <= 0 && energyDelta < 0) -> stringResource(R.string.gentle_dip)
+        moodDelta > 6 || (moodDelta >= 0 && energyDelta != null && energyDelta > 0) -> stringResource(R.string.gentle_climb)
+        moodDelta < -6 || (moodDelta <= 0 && energyDelta != null && energyDelta < 0) -> stringResource(R.string.gentle_dip)
         else -> stringResource(R.string.steady_flow)
     }
 }

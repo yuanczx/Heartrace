@@ -66,6 +66,26 @@ class TodayViewModelTest {
     }
 
     @Test
+    fun clearing_today_records_resets_the_next_check_in_selection() = runTest {
+        val repository = FakeHeartraceDataSource().apply {
+            today.value = TodayDataSnapshot(
+                moodValue = 72,
+                todayMoodRecords = listOf(MoodRecord(8, Mood.BRIGHT, 72, 3, 1L)),
+            )
+        }
+        val viewModel = TodayViewModel(repository)
+        advanceUntilIdle()
+        viewModel.selectMood(Mood.ELECTRIC)
+
+        repository.today.value = TodayDataSnapshot(moodValue = 25)
+        advanceUntilIdle()
+
+        assertEquals(Mood.LOW, viewModel.uiState.selectedMood)
+        assertEquals(25, viewModel.uiState.moodValue)
+        assertEquals(0, viewModel.uiState.savedCount)
+    }
+
+    @Test
     fun saveMoment_and_dismiss_clear_pending_prompt() = runTest {
         val repository = FakeHeartraceDataSource()
         val viewModel = TodayViewModel(repository)

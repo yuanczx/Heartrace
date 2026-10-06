@@ -24,11 +24,22 @@ constructor(
     var uiState by mutableStateOf(TodayUiState())
         private set
 
+    private var hasObservedTodayRecords = false
+
     init {
         viewModelScope.launch {
             repository.observeToday().collect { snapshot ->
                 val current = uiState
-                val shouldSyncSelection = current.errorMessage == null && !current.isSaving && current.savedCount == 0 && current.momentDraft.isBlank() && current.imageUris.isEmpty()
+                val recordsCleared = hasObservedTodayRecords && snapshot.todayMoodRecords.isEmpty()
+                hasObservedTodayRecords = snapshot.todayMoodRecords.isNotEmpty()
+                val shouldSyncSelection = recordsCleared ||
+                    (
+                        current.errorMessage == null &&
+                            !current.isSaving &&
+                            current.savedCount == 0 &&
+                            current.momentDraft.isBlank() &&
+                            current.imageUris.isEmpty()
+                        )
                 uiState = current.copy(
                     todayMoodRecords = snapshot.todayMoodRecords,
                     todayNotesCount = snapshot.todayNotes.size,
@@ -36,6 +47,7 @@ constructor(
                     moodValue = if (shouldSyncSelection) snapshot.moodValue else current.moodValue,
                     // Energy is optional per check-in; a previous record must not prefill the next one.
                     energyLevel = if (shouldSyncSelection) null else current.energyLevel,
+                    savedCount = if (recordsCleared) 0 else current.savedCount,
                 )
             }
         }
