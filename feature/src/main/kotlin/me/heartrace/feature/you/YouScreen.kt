@@ -5,8 +5,12 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -67,9 +72,21 @@ fun YouScreen(
 ) {
     val state = viewModel.uiState
     val settings = settingsViewModel.uiState
-    Crossfade(
+    AnimatedContent(
         targetState = state.isAchievementsVisible,
-        animationSpec = tween(durationMillis = 260),
+        modifier = Modifier.fillMaxWidth(),
+        transitionSpec = {
+            val slideSpec = tween<IntOffset>(durationMillis = 280)
+            val fadeSpec = tween<Float>(durationMillis = 180)
+            val direction = if (targetState) {
+                AnimatedContentTransitionScope.SlideDirection.Left
+            } else {
+                AnimatedContentTransitionScope.SlideDirection.Right
+            }
+            (slideIntoContainer(direction, slideSpec) + fadeIn(fadeSpec))
+                .togetherWith(slideOutOfContainer(direction, slideSpec) + fadeOut(fadeSpec))
+                .using(null)
+        },
         label = "you page transition",
     ) { showAchievements ->
         if (showAchievements) {
