@@ -4,7 +4,7 @@ The test suite is split by ownership and execution environment:
 
 - `core/src/androidTest` runs repository and Room tests against an in-memory SQLite database. It covers value bounds, note/check-in joins, attachment metadata, preferences, reset behavior, recent history, and Insights updates when the weekly goal changes without emitting again for unrelated preferences.
 - `feature/src/test` runs ViewModel and navigation tests on the JVM with a deterministic coroutine main dispatcher and an in-memory data-source fake. It covers success, failure, loading, editing, and boundary states for Today, note composition, Patterns, You, settings, and shell navigation. Metrics tests also cover duplicate daily check-ins, consecutive weekly goals, future weeks, and daylight-saving transitions. History tests cover inclusive starts and exclusive ends for day, month, and year ranges.
-- `app/src/androidTest` contains a Compose behavior smoke test for the three primary tabs and back-to-today navigation. It waits for the destination to become visible after each animated tab transition.
+- `app/src/androidTest` contains Compose behavior tests for the three primary tabs, back-to-today navigation, and achievement back handling. It waits for the destination to become visible after each animated tab transition. The achievement regression test opens achievements, switches to Insights, dispatches system back, and checks that the host receives it. Returning to You preserves achievements, where system back still closes them.
 
 Run the JVM suite with:
 

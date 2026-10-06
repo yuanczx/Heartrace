@@ -49,6 +49,7 @@ import me.heartrace.uikit.R
 internal fun AchievementsScreen(
     badges: List<BadgeStatus>,
     celebration: List<BadgeKind>,
+    isActive: Boolean,
     onBack: () -> Unit,
     onDismissCelebration: () -> Unit,
     contentMaxWidth: androidx.compose.ui.unit.Dp,
@@ -56,7 +57,7 @@ internal fun AchievementsScreen(
     verticalContentPadding: androidx.compose.ui.unit.Dp,
 ) {
     var selectedBadge by remember { mutableStateOf<BadgeStatus?>(null) }
-    BackHandler(enabled = selectedBadge == null, onBack = onBack)
+    BackHandler(enabled = isActive && selectedBadge == null, onBack = onBack)
     val earned = badges.count { it.earned }
     Column(Modifier.fillMaxSize()) {
         Surface(

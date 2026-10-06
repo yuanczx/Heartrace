@@ -90,6 +90,7 @@ internal fun HeartraceRoot(settingsViewModel: AppSettingsViewModel) {
                 entry<HeartraceDestination.You> {
                     YouScreen(
                         settingsViewModel = settingsViewModel,
+                        isActive = backStack.lastOrNull() == HeartraceDestination.You,
                         contentMaxWidth = contentMaxWidth,
                         horizontalContentPadding = horizontalContentPadding,
                         verticalContentPadding = verticalContentPadding,

@@ -73,6 +73,7 @@ import me.heartrace.uikit.R as FeatureR
 @Composable
 fun YouScreen(
     settingsViewModel: AppSettingsViewModel,
+    isActive: Boolean,
     contentMaxWidth: androidx.compose.ui.unit.Dp,
     horizontalContentPadding: androidx.compose.ui.unit.Dp,
     verticalContentPadding: androidx.compose.ui.unit.Dp,
@@ -102,6 +103,7 @@ fun YouScreen(
             AchievementsScreen(
                 badges = state.badges,
                 celebration = state.badgeCelebration,
+                isActive = isActive && state.isAchievementsVisible,
                 onBack = viewModel::closeAchievements,
                 onDismissCelebration = viewModel::dismissBadgeCelebration,
                 contentMaxWidth = contentMaxWidth,
