@@ -1,6 +1,17 @@
 # Heartrace
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 Heartrace (Chinese: **心迹**) is a local-first Android app for noticing your mood, capturing small moments, and learning from your own patterns over time. It is designed for lightweight daily check-ins rather than long-form journaling or social sharing.
+
+## Screenshots
+
+The screenshots show the Chinese interface with sample records on an Android emulator.
+
+| Today | Insights | You |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/today-light.png" alt="Today: mood check-in and energy timeline in Light theme" width="240"> | <img src="docs/screenshots/insights-light.png" alt="Insights: weekly goals and daily trends in Light theme" width="240"> | <img src="docs/screenshots/you-light.png" alt="You: profile and preferences in Light theme" width="240"> |
+| <img src="docs/screenshots/today-dark.png" alt="Today: mood check-in and energy timeline in Dark theme" width="240"> | <img src="docs/screenshots/insights-dark.png" alt="Insights: weekly goals and daily trends in Dark theme" width="240"> | <img src="docs/screenshots/you-dark.png" alt="You: profile and preferences in Dark theme" width="240"> |
 
 ## Features
 
@@ -9,7 +20,7 @@ Heartrace (Chinese: **心迹**) is a local-first Android app for noticing your m
 - **Insights**: review day, month, and year history with mood and energy trends, active days, weekly goals, streaks, and achievement badges.
 - **You**: edit a nickname and avatar, choose the weekly goal, switch reminders on or off, change language, change theme, and reset today's records.
 - **Localization**: English, Chinese, and system language selection.
-- **Themes**: persisted Light and Dark themes with a custom Material 3 palette and layouts that adapt to larger screens.
+- **Themes**: persisted Light, Dark, and system theme selection with a custom Material 3 palette and layouts that adapt to larger screens.
 - **Reminders**: an optional daily check-in notification scheduled through Android alarms.
 
 All mood records, notes, preferences, images, and voice notes remain on the device. The app does not require a network service or account.
@@ -47,7 +58,7 @@ feature -> uikit
 ## Requirements
 
 - Android Studio with Android SDK Platform 37
-- JDK 11
+- Android Studio's bundled JDK (build verified with JDK 21)
 - An Android device or emulator running API 30 or newer
 
 The project uses compile and target SDK 37, minimum SDK 30, and Java source/target compatibility 11. The application id is `me.heartrace`.
