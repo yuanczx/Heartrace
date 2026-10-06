@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [DailyNoteEntity::class, AppStateEntity::class, MoodEntryEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class HeartraceDatabase : RoomDatabase() {

@@ -78,6 +78,7 @@
     <string name="reminder_title">Daily check-in reminder</string>
     <string name="reminder_hint">A gentle nudge. You can turn it off anytime.</string>
     <string name="appearance_hint">Choose a theme for your space</string>
+    <string name="theme_system">System</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_light">Light</string>
     <string name="about">About</string>

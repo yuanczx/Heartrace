@@ -46,7 +46,7 @@ interface HeartraceDataSource {
 
     suspend fun setLanguage(language: AppLanguage)
 
-    suspend fun setLightTheme(light: Boolean)
+    suspend fun setThemeMode(mode: ThemeMode)
 
     suspend fun setRemindersEnabled(enabled: Boolean)
 

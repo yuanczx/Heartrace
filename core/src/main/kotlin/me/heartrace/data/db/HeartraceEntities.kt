@@ -26,7 +26,7 @@ data class AppStateEntity(
     val mood: String = "STEADY",
     val savedNote: String = "",
     val languageTag: String = "system",
-    val lightTheme: Boolean = false,
+    val themeMode: String = "system",
     val remindersEnabled: Boolean = false,
     val nickname: String = "",
     val avatarUri: String? = null,

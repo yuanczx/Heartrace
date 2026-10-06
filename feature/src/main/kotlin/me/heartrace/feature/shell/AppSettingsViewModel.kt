@@ -10,12 +10,13 @@ import kotlinx.coroutines.launch
 import me.heartrace.data.AppLanguage
 import me.heartrace.data.HeartraceDataSource
 import me.heartrace.data.ReminderSchedulerPort
+import me.heartrace.data.ThemeMode
 import javax.inject.Inject
 
 data class AppSettingsUiState(
     val isLoaded: Boolean = false,
     val language: AppLanguage = AppLanguage.SYSTEM,
-    val lightTheme: Boolean = false,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val remindersEnabled: Boolean = false,
     val nickname: String = "",
     val avatarUri: String? = null,
@@ -41,7 +42,7 @@ constructor(
                     AppSettingsUiState(
                         isLoaded = true,
                         language = snapshot.language,
-                        lightTheme = snapshot.lightTheme,
+                        themeMode = snapshot.themeMode,
                         remindersEnabled = snapshot.remindersEnabled,
                         nickname = snapshot.nickname,
                         avatarUri = snapshot.avatarUri,
@@ -60,9 +61,9 @@ constructor(
         viewModelScope.launch { repository.setLanguage(language) }
     }
 
-    fun setLightTheme(light: Boolean) {
-        uiState = uiState.copy(lightTheme = light)
-        viewModelScope.launch { repository.setLightTheme(light) }
+    fun setThemeMode(mode: ThemeMode) {
+        uiState = uiState.copy(themeMode = mode)
+        viewModelScope.launch { repository.setThemeMode(mode) }
     }
 
     fun setRemindersEnabled(enabled: Boolean) {

@@ -1,5 +1,6 @@
 package me.heartrace.ui.theme
 
+import android.app.Activity
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -7,8 +8,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 data class HeartracePalette(
     val ink: Color,
@@ -90,6 +94,7 @@ fun HeartraceMaterialTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
+    val view = LocalView.current
     val targetPalette = if (darkTheme) DarkPalette else LightPalette
     val palette = HeartracePalette(
         ink = animateColorAsState(targetPalette.ink, label = "theme ink").value,
@@ -104,6 +109,10 @@ fun HeartraceMaterialTheme(
         violet = animateColorAsState(targetPalette.violet, label = "theme violet").value,
         amber = animateColorAsState(targetPalette.amber, label = "theme amber").value,
     )
+    SideEffect {
+        val window = (view.context as? Activity)?.window ?: return@SideEffect
+        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+    }
     CompositionLocalProvider(LocalHeartracePalette provides palette) {
         MaterialTheme(
             colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,

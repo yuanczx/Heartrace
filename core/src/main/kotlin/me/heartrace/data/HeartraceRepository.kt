@@ -50,7 +50,8 @@ constructor(
             language =
             AppLanguage.entries.firstOrNull { it.tag == saved.languageTag }
                 ?: AppLanguage.SYSTEM,
-            lightTheme = saved.lightTheme,
+            themeMode = ThemeMode.entries.firstOrNull { it.tag == saved.themeMode }
+                ?: ThemeMode.SYSTEM,
             remindersEnabled = saved.remindersEnabled,
             nickname = saved.nickname,
             avatarUri = saved.avatarUri,
@@ -300,7 +301,7 @@ constructor(
 
     override suspend fun setLanguage(language: AppLanguage) = updateState { copy(languageTag = language.tag) }
 
-    override suspend fun setLightTheme(light: Boolean) = updateState { copy(lightTheme = light) }
+    override suspend fun setThemeMode(mode: ThemeMode) = updateState { copy(themeMode = mode.tag) }
 
     override suspend fun setRemindersEnabled(enabled: Boolean) = updateState { copy(remindersEnabled = enabled) }
 

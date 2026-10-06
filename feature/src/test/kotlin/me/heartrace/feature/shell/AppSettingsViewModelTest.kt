@@ -4,6 +4,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import me.heartrace.data.AppLanguage
+import me.heartrace.data.ThemeMode
 import me.heartrace.feature.testing.FakeHeartraceDataSource
 import me.heartrace.feature.testing.FakeReminderScheduler
 import me.heartrace.feature.testing.MainDispatcherRule
@@ -18,7 +19,7 @@ class AppSettingsViewModelTest {
     @Test
     fun initial_preferences_are_loaded_and_reminder_state_is_synced() = runTest {
         val repository = FakeHeartraceDataSource().apply {
-            preferences.value = preferences.value.copy(language = AppLanguage.CHINESE, lightTheme = true)
+            preferences.value = preferences.value.copy(language = AppLanguage.CHINESE, themeMode = ThemeMode.LIGHT)
         }
         val scheduler = FakeReminderScheduler()
         val viewModel = AppSettingsViewModel(repository, scheduler)
@@ -26,7 +27,7 @@ class AppSettingsViewModelTest {
 
         assertEquals(true, viewModel.uiState.isLoaded)
         assertEquals(AppLanguage.CHINESE, viewModel.uiState.language)
-        assertEquals(true, viewModel.uiState.lightTheme)
+        assertEquals(ThemeMode.LIGHT, viewModel.uiState.themeMode)
         assertEquals(listOf(false), scheduler.enabledValues)
     }
 
@@ -38,13 +39,13 @@ class AppSettingsViewModelTest {
         advanceUntilIdle()
 
         viewModel.setLanguage(AppLanguage.ENGLISH)
-        viewModel.setLightTheme(true)
+        viewModel.setThemeMode(ThemeMode.LIGHT)
         viewModel.setRemindersEnabled(true)
         viewModel.setWeeklyGoalDays(7)
         advanceUntilIdle()
 
         assertEquals(AppLanguage.ENGLISH, repository.preferences.value.language)
-        assertEquals(true, repository.preferences.value.lightTheme)
+        assertEquals(ThemeMode.LIGHT, repository.preferences.value.themeMode)
         assertEquals(true, repository.preferences.value.remindersEnabled)
         assertEquals(7, repository.preferences.value.weeklyGoalDays)
         assertEquals(listOf(false, true), scheduler.enabledValues)

@@ -1,11 +1,13 @@
 package me.heartrace.feature.shell
 
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.os.LocaleListCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import me.heartrace.data.AppLanguage
+import me.heartrace.data.ThemeMode
 import me.heartrace.ui.theme.HeartraceMaterialTheme
 
 private fun AppLanguage.toLocaleListCompat(): LocaleListCompat = when (this) {
@@ -25,7 +27,12 @@ fun HeartraceApp() {
             }
         }
     }
-    HeartraceMaterialTheme(darkTheme = !settings.lightTheme) {
+    val darkTheme = when (settings.themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    HeartraceMaterialTheme(darkTheme = darkTheme) {
         if (settings.isLoaded) HeartraceRoot(settingsViewModel)
     }
 }

@@ -190,13 +190,13 @@ class HeartraceRepositoryTest {
     @Test
     fun preferences_are_persisted_with_safe_profile_name() = runBlocking {
         repository.setLanguage(AppLanguage.CHINESE)
-        repository.setLightTheme(true)
+        repository.setThemeMode(ThemeMode.LIGHT)
         repository.setRemindersEnabled(true)
         repository.setProfile("   ", "file://avatar")
 
         val preferences = repository.observePreferences().first()
         assertEquals(AppLanguage.CHINESE, preferences.language)
-        assertTrue(preferences.lightTheme)
+        assertEquals(ThemeMode.LIGHT, preferences.themeMode)
         assertTrue(preferences.remindersEnabled)
         assertEquals("", preferences.nickname)
         assertEquals("file://avatar", preferences.avatarUri)

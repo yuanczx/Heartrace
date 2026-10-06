@@ -78,6 +78,7 @@
     <string name="reminder_title">每日签到提醒</string>
     <string name="reminder_hint">温和提醒，随时可以关闭。</string>
     <string name="appearance_hint">选择你喜欢的显示主题</string>
+    <string name="theme_system">跟随系统</string>
     <string name="theme_dark">暗色</string>
     <string name="theme_light">明亮</string>
     <string name="about">关于</string>

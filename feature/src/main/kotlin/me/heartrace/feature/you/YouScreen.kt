@@ -44,6 +44,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.heartrace.data.AppLanguage
+import me.heartrace.data.ThemeMode
 import me.heartrace.feature.shell.AppSettingsViewModel
 import me.heartrace.ui.components.AdaptiveTwoPane
 import me.heartrace.ui.components.Coral
@@ -317,11 +318,12 @@ private fun AppearancePane(
             Spacer(Modifier.height(13.dp))
             SlidingSegmentedControl(
                 options = listOf(
-                    SegmentedOption(false, stringResource(FeatureR.string.theme_dark)),
-                    SegmentedOption(true, stringResource(FeatureR.string.theme_light)),
+                    SegmentedOption(ThemeMode.SYSTEM, stringResource(FeatureR.string.theme_system)),
+                    SegmentedOption(ThemeMode.DARK, stringResource(FeatureR.string.theme_dark)),
+                    SegmentedOption(ThemeMode.LIGHT, stringResource(FeatureR.string.theme_light)),
                 ),
-                selectedOption = settings.lightTheme,
-                onOptionSelected = settingsViewModel::setLightTheme,
+                selectedOption = settings.themeMode,
+                onOptionSelected = settingsViewModel::setThemeMode,
             )
         }
     }

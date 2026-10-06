@@ -12,6 +12,14 @@ enum class AppLanguage(
     CHINESE("zh"),
 }
 
+enum class ThemeMode(
+    val tag: String,
+) {
+    SYSTEM("system"),
+    LIGHT("light"),
+    DARK("dark"),
+}
+
 data class DailyNote(
     val id: Long,
     val date: String,
@@ -38,7 +46,7 @@ data class MoodRecord(
 
 data class PreferencesSnapshot(
     val language: AppLanguage = AppLanguage.SYSTEM,
-    val lightTheme: Boolean = false,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val remindersEnabled: Boolean = false,
     val nickname: String = "",
     val avatarUri: String? = null,

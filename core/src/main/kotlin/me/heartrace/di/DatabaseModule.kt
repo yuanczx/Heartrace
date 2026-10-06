@@ -61,6 +61,34 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE app_state_new (" +
+                    "id INTEGER NOT NULL, " +
+                    "mood TEXT NOT NULL, " +
+                    "savedNote TEXT NOT NULL, " +
+                    "languageTag TEXT NOT NULL, " +
+                    "themeMode TEXT NOT NULL, " +
+                    "remindersEnabled INTEGER NOT NULL, " +
+                    "nickname TEXT NOT NULL, " +
+                    "avatarUri TEXT, " +
+                    "weeklyGoalDays INTEGER NOT NULL, " +
+                    "PRIMARY KEY(id)" +
+                    ")",
+            )
+            db.execSQL(
+                "INSERT INTO app_state_new " +
+                    "(id, mood, savedNote, languageTag, themeMode, remindersEnabled, nickname, avatarUri, weeklyGoalDays) " +
+                    "SELECT id, mood, savedNote, languageTag, " +
+                    "CASE WHEN lightTheme = 1 THEN 'light' ELSE 'dark' END, " +
+                    "remindersEnabled, nickname, avatarUri, weeklyGoalDays FROM app_state",
+            )
+            db.execSQL("DROP TABLE app_state")
+            db.execSQL("ALTER TABLE app_state_new RENAME TO app_state")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(
@@ -71,6 +99,7 @@ object DatabaseModule {
         .addMigrations(MIGRATION_2_3)
         .addMigrations(MIGRATION_3_4)
         .addMigrations(MIGRATION_4_5)
+        .addMigrations(MIGRATION_5_6)
         .build()
 
     @Provides fun provideNoteDao(database: HeartraceDatabase): DailyNoteDao = database.dailyNoteDao()

@@ -6,6 +6,7 @@ import me.heartrace.data.AppLanguage
 import me.heartrace.data.HeartraceDataSource
 import me.heartrace.data.InsightsDataSnapshot
 import me.heartrace.data.PreferencesSnapshot
+import me.heartrace.data.ThemeMode
 import me.heartrace.data.TodayDataSnapshot
 
 class FakeHeartraceDataSource : HeartraceDataSource {
@@ -97,8 +98,8 @@ class FakeHeartraceDataSource : HeartraceDataSource {
         preferences.value = preferences.value.copy(language = language)
     }
 
-    override suspend fun setLightTheme(light: Boolean) {
-        preferences.value = preferences.value.copy(lightTheme = light)
+    override suspend fun setThemeMode(mode: ThemeMode) {
+        preferences.value = preferences.value.copy(themeMode = mode)
     }
 
     override suspend fun setRemindersEnabled(enabled: Boolean) {
