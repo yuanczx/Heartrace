@@ -50,7 +50,7 @@ fun calculateWeeklyGoalProgress(
 }
 
 fun calculateCurrentStreak(records: List<MoodRecord>, now: Long): Int {
-    val days = records.map { dayStart(it.recordedAt) }.toSet()
+    val days = records.asSequence().map { dayStart(it.recordedAt) }.toSet()
     if (days.isEmpty()) return 0
     var cursor = dayStart(now)
     if (cursor !in days) cursor = shiftDays(cursor, -1)
@@ -65,7 +65,7 @@ fun calculateCurrentStreak(records: List<MoodRecord>, now: Long): Int {
 fun calculateBadges(records: List<MoodRecord>, now: Long, goalDays: Int): List<BadgeStatus> {
     val streak = calculateLongestStreak(records)
     val weeklyGoals = completedWeeklyGoals(records, now, goalDays)
-    val moodVariety = records.map { it.mood }.toSet().size
+    val moodVariety = records.asSequence().map { it.mood }.toSet().size
     val moments = records.count {
         !it.momentText.isNullOrBlank() || it.imageUris.isNotEmpty() || !it.audioUri.isNullOrBlank()
     }
@@ -84,7 +84,7 @@ fun calculateBadges(records: List<MoodRecord>, now: Long, goalDays: Int): List<B
 }
 
 fun calculateLongestStreak(records: List<MoodRecord>): Int {
-    val days = records.map { dayStart(it.recordedAt) }.toSet().sorted()
+    val days = records.asSequence().map { dayStart(it.recordedAt) }.toSet().sorted()
     if (days.isEmpty()) return 0
     var longest = 1
     var current = 1
@@ -121,16 +121,19 @@ fun shiftDays(timestamp: Long, amount: Int): Long = Calendar.getInstance().apply
 
 private fun completedWeeklyGoals(records: List<MoodRecord>, now: Long, goalDays: Int): Int {
     if (records.isEmpty()) return 0
-    val weekStarts = records.map { weekStart(it.recordedAt) }.distinct().sorted()
-    val completed = weekStarts.filter { start ->
-        val end = shiftDays(start, 7)
-        val activeDays = records.asSequence()
-            .filter { it.recordedAt in start until end }
-            .map { dayStart(it.recordedAt) }
-            .toSet()
-            .size
-        activeDays >= goalDays.coerceIn(3, 7) && start <= weekStart(now)
-    }
+    val currentWeek = weekStart(now)
+    val safeGoal = goalDays.coerceIn(3, 7)
+    // A day can contain several check-ins. Group distinct days once instead
+    // of scanning the entire history again for each recorded week.
+    val daysByWeek = records.asSequence()
+        .map { dayStart(it.recordedAt) }
+        .toSet()
+        .groupBy { weekStart(it) }
+    val completed = daysByWeek.entries.asSequence()
+        .filter { (start, days) -> start <= currentWeek && days.size >= safeGoal }
+        .map { it.key }
+        .sorted()
+        .toList()
     var longest = 0
     var current = 0
     completed.forEachIndexed { index, start ->

@@ -73,22 +73,21 @@ constructor(
         val selectedDay = selectedDateStart!!.coerceAtMost(todayStart)
         selectedDateStart = selectedDay
 
-        val windowStart = shiftDays(todayStart, -6)
-        val recentRecords = snapshot.recentRecords.filter { it.recordedAt >= windowStart && it.recordedAt <= now }
-        val periodRecords = when (historyRange) {
-            HistoryRange.DAY -> recentRecords
-
-            HistoryRange.MONTH -> snapshot.records.filter {
-                it.recordedAt >= periodStart(selectedDay) && it.recordedAt < shiftPeriod(selectedDay, 1)
-            }
-
-            HistoryRange.YEAR -> snapshot.records.filter {
-                it.recordedAt >= periodStart(selectedDay) && it.recordedAt < shiftPeriod(selectedDay, 1)
-            }
+        val selectedPeriodStart = periodStart(selectedDay)
+        val selectedPeriodEnd = shiftPeriod(selectedDay, 1)
+        val selectedRecords = snapshot.records.filter {
+            it.recordedAt >= selectedPeriodStart && it.recordedAt < selectedPeriodEnd
         }
-        val days = periodRecords.map { dayStart(it.recordedAt) }.toSet().size
-        val summaries = periodRecords
-            .groupBy { dayStart(it.recordedAt) }
+        val windowStart = shiftDays(todayStart, -6)
+        val periodRecords = when (historyRange) {
+            HistoryRange.DAY -> snapshot.recentRecords.filter {
+                it.recordedAt >= windowStart && it.recordedAt <= now
+            }
+
+            HistoryRange.MONTH, HistoryRange.YEAR -> selectedRecords
+        }
+        val recordsByDay = periodRecords.groupBy { dayStart(it.recordedAt) }
+        val summaries = recordsByDay
             .map { (dayTimestamp, dayRecords) ->
                 val avgMood = dayRecords.map { it.moodValue }.average().toInt()
                 val avgEnergy = dayRecords.mapNotNull { it.energyLevel }.takeIf { it.isNotEmpty() }?.average()?.toFloat()
@@ -105,13 +104,11 @@ constructor(
             .sortedBy { it.dayStart }
 
         uiState = PatternsUiState(
-            records = snapshot.records.filter { record ->
-                record.recordedAt >= periodStart(selectedDay) && record.recordedAt < shiftPeriod(selectedDay, 1)
-            },
+            records = selectedRecords,
             hasHistory = snapshot.records.isNotEmpty(),
             notes = snapshot.notes,
             dailySummaries = summaries,
-            activeDays = days,
+            activeDays = recordsByDay.size,
             averageEnergy = periodRecords.takeIf { it.any { record -> record.energyLevel != null } }?.mapNotNull { it.energyLevel }
                 ?.average()?.toFloat(),
             averageMood = periodRecords.takeIf { it.isNotEmpty() }?.map { it.moodValue }
@@ -121,7 +118,7 @@ constructor(
             currentStreak = calculateCurrentStreak(snapshot.records, now),
             selectedDateStart = selectedDay,
             historyRange = historyRange,
-            canGoToNextDate = periodStart(selectedDay) < periodStart(todayStart),
+            canGoToNextDate = selectedPeriodStart < periodStart(todayStart),
             editingRecord = uiState.editingRecord,
             errorMessage = uiState.errorMessage,
         )

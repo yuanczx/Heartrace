@@ -21,6 +21,8 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -215,6 +217,7 @@ private fun TodayTimelinePane(
     records: List<MoodRecord>,
     onEditRecord: (MoodRecord) -> Unit,
 ) {
+    val orderedRecords = remember(records) { records.sortedByDescending { it.recordedAt } }
     EnergySection(records = records)
     Spacer(Modifier.height(25.dp))
     SectionLabel(stringResource(R.string.today_timeline))
@@ -224,8 +227,10 @@ private fun TodayTimelinePane(
             Text(stringResource(R.string.empty_timeline), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(16.dp))
         }
     } else {
-        records.sortedByDescending { it.recordedAt }.forEach { record ->
-            MoodRecordRow(record = record, showDate = false, onLongClick = { onEditRecord(record) })
+        orderedRecords.forEach { record ->
+            key(record.id) {
+                MoodRecordRow(record = record, showDate = false, onLongClick = { onEditRecord(record) })
+            }
         }
     }
 }

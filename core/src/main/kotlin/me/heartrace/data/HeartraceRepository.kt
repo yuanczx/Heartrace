@@ -4,18 +4,22 @@ import android.content.Context
 import androidx.core.net.toUri
 import androidx.room.withTransaction
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import me.heartrace.data.db.AppStateDao
 import me.heartrace.data.db.AppStateEntity
 import me.heartrace.data.db.DailyNoteDao
@@ -57,13 +61,13 @@ constructor(
             avatarUri = saved.avatarUri,
             weeklyGoalDays = saved.weeklyGoalDays.coerceIn(3, 7),
         )
-    }
+    }.distinctUntilChanged()
 
     override fun observeToday(): Flow<TodayDataSnapshot> = dayTicker().flatMapLatest { todayStart ->
         combine(
-            noteDao.observeBetween(todayStart, Long.MAX_VALUE),
+            noteDao.observeBetween(todayStart, Long.MAX_VALUE).distinctUntilChanged(),
             stateDao.observe(),
-            moodEntryDao.observeBetween(todayStart, Long.MAX_VALUE),
+            moodEntryDao.observeBetween(todayStart, Long.MAX_VALUE).distinctUntilChanged(),
             minuteTicker(),
         ) { notes, state, moodEntries, _ ->
             // The ticker only triggers a refresh. Its emitted timestamp may be
@@ -73,12 +77,12 @@ constructor(
             // database invalidations always build a current snapshot.
             buildTodaySnapshot(notes, state, moodEntries, System.currentTimeMillis())
         }
-    }
+    }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
-    override suspend fun loadTodaySnapshot(): TodayDataSnapshot {
+    override suspend fun loadTodaySnapshot(): TodayDataSnapshot = withContext(Dispatchers.Default) {
         val now = System.currentTimeMillis()
         val todayStart = startOfDay(now)
-        return buildTodaySnapshot(
+        buildTodaySnapshot(
             notes = noteDao.observeBetween(todayStart, Long.MAX_VALUE).first(),
             state = stateDao.observe().first(),
             moodEntries = moodEntryDao.observeBetween(todayStart, Long.MAX_VALUE).first(),
@@ -88,8 +92,8 @@ constructor(
 
     override fun observeInsights(): Flow<InsightsDataSnapshot> {
         val historyFlow = combine(
-            noteDao.observeAll(),
-            moodEntryDao.observeAll(),
+            noteDao.observeAll().distinctUntilChanged(),
+            moodEntryDao.observeAll().distinctUntilChanged(),
         ) { notes, moodEntries ->
             val noteModels = notes.map { it.toModel() }
             val notesByEntryId = noteModels.mapNotNull { note ->
@@ -110,12 +114,18 @@ constructor(
                 notes = noteModels,
             )
         }
-        return combine(historyFlow, stateDao.observe(), dayTicker()) { history, state, _ ->
+        val weeklyGoalFlow = stateDao.observe()
+            .map { it?.weeklyGoalDays?.coerceIn(3, 7) ?: 5 }
+            .distinctUntilChanged()
+        // A new day must reach collectors even when the stored history is
+        // unchanged: current streaks and weekly progress depend on the clock.
+        return combine(historyFlow, weeklyGoalFlow, dayTicker()) { history, weeklyGoalDays, _ ->
+            val recentWindowStart = startOfRecentWindow()
             history.copy(
-                recentRecords = history.records.filter { it.recordedAt >= startOfRecentWindow() },
-                weeklyGoalDays = state?.weeklyGoalDays?.coerceIn(3, 7) ?: 5,
+                recentRecords = history.records.filter { it.recordedAt >= recentWindowStart },
+                weeklyGoalDays = weeklyGoalDays,
             )
-        }
+        }.flowOn(Dispatchers.Default)
     }
 
     private suspend fun ensureState() {

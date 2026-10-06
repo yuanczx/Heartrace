@@ -93,6 +93,39 @@ class PatternsViewModelTest {
     }
 
     @Test
+    fun history_periods_include_start_and_exclude_next_period() = runTest {
+        val januaryStart = Calendar.getInstance().apply {
+            clear()
+            set(2025, Calendar.JANUARY, 1)
+        }.timeInMillis
+        val februaryStart = Calendar.getInstance().apply {
+            clear()
+            set(2025, Calendar.FEBRUARY, 1)
+        }.timeInMillis
+        val nextYearStart = Calendar.getInstance().apply {
+            clear()
+            set(2026, Calendar.JANUARY, 1)
+        }.timeInMillis
+        val records = listOf(januaryStart - 1, januaryStart, februaryStart - 1, februaryStart, nextYearStart)
+            .mapIndexed { index, timestamp -> MoodRecord(index.toLong(), Mood.STEADY, 55, null, timestamp) }
+        val repository = FakeHeartraceDataSource().apply {
+            insights.value = InsightsDataSnapshot(records = records)
+        }
+        val viewModel = PatternsViewModel(repository)
+        advanceUntilIdle()
+        viewModel.selectHistoryDate(januaryStart)
+
+        assertEquals(listOf(1L), viewModel.uiState.records.map { it.id })
+        viewModel.selectHistoryRange(HistoryRange.MONTH)
+        assertEquals(listOf(1L, 2L), viewModel.uiState.records.map { it.id })
+        assertEquals(2, viewModel.uiState.recordCount)
+        assertEquals(2, viewModel.uiState.activeDays)
+        viewModel.selectHistoryRange(HistoryRange.YEAR)
+        assertEquals(listOf(1L, 2L, 3L), viewModel.uiState.records.map { it.id })
+        assertEquals(3, viewModel.uiState.recordCount)
+    }
+
+    @Test
     fun editing_and_delete_delegate_to_repository() = runTest {
         val repository = FakeHeartraceDataSource()
         val viewModel = PatternsViewModel(repository)

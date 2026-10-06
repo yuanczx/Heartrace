@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -148,7 +149,9 @@ private fun HistoryPane(
         Text(stringResource(R.string.no_history_for_date), color = Muted, fontSize = 13.sp)
     } else {
         state.records.forEach { record ->
-            MoodRecordRow(record = record, showDate = true, onLongClick = { onEditRecord(record) })
+            key(record.id) {
+                MoodRecordRow(record = record, showDate = true, onLongClick = { onEditRecord(record) })
+            }
         }
     }
 }

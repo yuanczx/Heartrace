@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import me.heartrace.data.db.DailyNoteEntity
 import me.heartrace.data.db.HeartraceDatabase
 import me.heartrace.data.db.MoodEntryEntity
@@ -200,6 +201,30 @@ class HeartraceRepositoryTest {
         assertTrue(preferences.remindersEnabled)
         assertEquals("", preferences.nickname)
         assertEquals("file://avatar", preferences.avatarUri)
+    }
+
+    @Test
+    fun insights_ignore_unrelated_preferences_but_refresh_weekly_goal() = runBlocking {
+        repository.saveCheckIn(moodValue = 72, energyLevel = null, momentText = "saved moment")
+        val snapshots = Channel<InsightsDataSnapshot>(Channel.UNLIMITED)
+        val observer = launch {
+            repository.observeInsights().collect { snapshots.send(it) }
+        }
+        try {
+            val initial = withTimeout(2_000) { snapshots.receive() }
+            repository.setThemeMode(ThemeMode.LIGHT)
+            repository.setLanguage(AppLanguage.CHINESE)
+            assertNull(withTimeoutOrNull(250) { snapshots.receive() })
+
+            repository.setWeeklyGoalDays(3)
+            val updated = withTimeout(2_000) { snapshots.receive() }
+            assertEquals(3, updated.weeklyGoalDays)
+            assertEquals(initial.records, updated.records)
+            assertEquals("saved moment", updated.records.single().momentText)
+        } finally {
+            observer.cancel()
+            snapshots.close()
+        }
     }
 
     @Test

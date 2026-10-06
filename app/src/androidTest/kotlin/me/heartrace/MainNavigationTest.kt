@@ -1,6 +1,7 @@
 package me.heartrace
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -22,15 +23,22 @@ class MainNavigationTest {
         val youSubtitle = activity.getString(UIKitR.string.you_subtitle)
         val todayTab = activity.getString(UIKitR.string.nav_today)
 
-        composeRule.onNodeWithText(todayTitle).assertIsDisplayed()
+        waitForScreen(todayTitle)
 
         composeRule.onNodeWithContentDescription(insightsTab).performClick()
-        composeRule.onNodeWithText(insightsTitle).assertIsDisplayed()
+        waitForScreen(insightsTitle)
 
         composeRule.onNodeWithContentDescription(youTab).performClick()
-        composeRule.onNodeWithText(youSubtitle).assertIsDisplayed()
+        waitForScreen(youSubtitle)
 
         composeRule.onNodeWithContentDescription(todayTab).performClick()
-        composeRule.onNodeWithText(todayTitle).assertIsDisplayed()
+        waitForScreen(todayTitle)
+    }
+
+    private fun waitForScreen(text: String) {
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onNodeWithText(text).isDisplayed()
+        }
+        composeRule.onNodeWithText(text).assertIsDisplayed()
     }
 }

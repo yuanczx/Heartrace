@@ -13,6 +13,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Calendar
+import java.util.TimeZone
 
 class AwarenessMetricsTest {
     @Test
@@ -79,6 +80,56 @@ class AwarenessMetricsTest {
             (0..4).map { day -> MoodRecord((week * 7 + day).toLong(), Mood.STEADY, 55, 2, shiftDays(monday, week * 7 + day)) }
         }
         assertTrue(!calculateBadges(records, now, 5).first { it.kind == BadgeKind.FOUR_WEEKLY_GOALS }.earned)
+    }
+
+    @Test
+    fun weekly_badges_count_distinct_days_in_unsorted_history() {
+        val now = System.currentTimeMillis()
+        val monday = weekStart(now)
+        val duplicateDays = (-4..-1).flatMap { week ->
+            (0..4).map { checkIn ->
+                MoodRecord((week * 10 + checkIn).toLong(), Mood.STEADY, 55, 2, shiftDays(monday, week * 7))
+            }
+        }
+        assertTrue(!calculateBadges(duplicateDays.reversed(), now, 5).first { it.kind == BadgeKind.FIRST_WEEKLY_GOAL }.earned)
+
+        val completedWeeks = (-4..-1).flatMap { week ->
+            (0..4).map { day ->
+                MoodRecord((week * 10 + day).toLong(), Mood.STEADY, 55, 2, shiftDays(monday, week * 7 + day))
+            }
+        }
+        assertTrue(calculateBadges(completedWeeks.reversed(), now, 5).first { it.kind == BadgeKind.FOUR_WEEKLY_GOALS }.earned)
+    }
+
+    @Test
+    fun future_weeks_do_not_earn_weekly_badges() {
+        val now = System.currentTimeMillis()
+        val nextMonday = shiftDays(weekStart(now), 7)
+        val records = (0..4).map { day ->
+            MoodRecord(day.toLong(), Mood.STEADY, 55, 2, shiftDays(nextMonday, day))
+        }
+
+        assertTrue(!calculateBadges(records, now, 5).first { it.kind == BadgeKind.FIRST_WEEKLY_GOAL }.earned)
+    }
+
+    @Test
+    fun weekly_badges_preserve_calendar_days_across_daylight_saving() {
+        val originalTimeZone = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("America/New_York"))
+            val monday = Calendar.getInstance().apply {
+                clear()
+                set(2026, Calendar.MARCH, 2, 0, 0, 0)
+            }.timeInMillis
+            val records = (0..27).map { day ->
+                MoodRecord(day.toLong(), Mood.STEADY, 55, 2, shiftDays(monday, day))
+            }
+
+            val badges = calculateBadges(records, shiftDays(monday, 27), 7)
+            assertTrue(badges.first { it.kind == BadgeKind.FOUR_WEEKLY_GOALS }.earned)
+        } finally {
+            TimeZone.setDefault(originalTimeZone)
+        }
     }
 
     @Test
