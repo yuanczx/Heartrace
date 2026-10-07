@@ -329,6 +329,15 @@ private fun AppearancePane(
     settingsViewModel: AppSettingsViewModel,
     onReset: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val versionName = remember(context) {
+        val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+        } else {
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        }
+        packageInfo.versionName.orEmpty()
+    }
     SectionLabel(stringResource(FeatureR.string.appearance))
     Spacer(Modifier.height(10.dp))
     Surface(color = Panel, shape = RoundedCornerShape(13.dp), modifier = Modifier.fillMaxWidth()) {
@@ -353,7 +362,7 @@ private fun AppearancePane(
     Spacer(Modifier.height(10.dp))
     Surface(color = Panel, shape = RoundedCornerShape(13.dp), modifier = Modifier.fillMaxWidth()) {
         Column {
-            SettingRow(stringResource(FeatureR.string.version), "Heartrace")
+            SettingRow(stringResource(FeatureR.string.version), versionName)
             SettingRow(stringResource(FeatureR.string.reset_today), stringResource(FeatureR.string.reset_hint), onClick = onReset)
         }
     }

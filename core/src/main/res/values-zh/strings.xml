@@ -1,5 +1,5 @@
 <resources>
-    <string name="reminder_channel_name">每日签到</string>
+    <string name="reminder_channel_name">每日心情提醒</string>
     <string name="reminder_notification_title">留一点时间给自己</string>
-    <string name="reminder_notification_text">留意一下今天的自己。</string>
+    <string name="reminder_notification_text">此刻心情如何？留一点时间，记录一下。</string>
 </resources>
